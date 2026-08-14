@@ -154,7 +154,13 @@ async function ensureUserDoc(fbUser) {
 onAuthStateChanged(auth, async (fbUser) => {
     if (unsubUserDoc) { unsubUserDoc(); unsubUserDoc = null; }
     teardownDataListeners();
-    if (!fbUser) { currentUser = null; authReady = true; renderAll(); return; }
+    if (!fbUser) {
+        currentUser = null;
+        authReady = true;
+        sessionStorage.clear(); // que el NIP se vuelva a pedir en el próximo inicio de sesión
+        renderAll();
+        return;
+    }
     try {
         await ensureUserDoc(fbUser);
     } catch (e) {
