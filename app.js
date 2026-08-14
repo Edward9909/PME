@@ -1,7 +1,7 @@
 /* ================= Firebase ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import {
-    getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged,
+    getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
     connectAuthEmulator,
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
@@ -106,19 +106,22 @@ function taskOptionsFor(pid, selected) {
 }
 
 /* ================= autenticación =================
-   Se usa signInWithRedirect (no signInWithPopup): en celulares —el
-   dispositivo principal del equipo en el taller— los popups suelen
-   bloquearse o comportarse mal, mientras que el flujo de redirección
-   funciona igual en escritorio y en móvil. */
+   Se usa signInWithPopup (no signInWithRedirect): el flujo de redirección
+   depende de que el navegador conserve un marcador en almacenamiento local
+   entre la salida a Google y el regreso a la app, y la protección de
+   almacenamiento entre sitios de los navegadores modernos (Chrome, Safari)
+   puede romper esa persistencia — se comprobó que fallaba en producción de
+   forma silenciosa (redirigía a Google y volvía sin iniciar sesión, sin
+   ningún error). El popup se comunica en vivo con la ventana que lo abrió,
+   sin depender de ese guardado. */
 async function signInGoogle() {
-    try { await signInWithRedirect(auth, provider); }
-    catch (e) { console.error('Error al iniciar sesión', e); alert('No se pudo iniciar sesión: ' + e.message); }
+    try { await signInWithPopup(auth, provider); }
+    catch (e) {
+        if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+        console.error('Error al iniciar sesión', e);
+        alert('No se pudo iniciar sesión: ' + e.message);
+    }
 }
-
-getRedirectResult(auth).catch(e => {
-    console.error('Error al completar el inicio de sesión', e);
-    alert('No se pudo completar el inicio de sesión: ' + e.message);
-});
 
 async function signOutUser() {
     teardownDataListeners();
