@@ -1,0 +1,1975 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tablero de proyectos — Ale</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --paper: #F1EDE3;
+            --ink: #2B2B28;
+            --ink-soft: #5C5A52;
+            --blueprint: #2C5F74;
+            --blueprint-light: #E4EEF0;
+            --oxide: #B5502D;
+            --oxide-light: #F7E6DE;
+            --olive: #5C6B3E;
+            --olive-light: #E8ECDC;
+            --plum: #6B4A6B;
+            --plum-light: #EFE3EC;
+            --amber: #9C7A1F;
+            --amber-light: #F5EAD3;
+            --teal: #1F7A6C;
+            --teal-light: #DCEFEB;
+            --indigo: #4C4A8C;
+            --indigo-light: #E4E3F2;
+            --steel: #6E6B62;
+            --steel-light: #EAE8E1;
+            --line: #D8D3C4;
+            --card: #FFFFFF;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--paper);
+            color: var(--ink);
+            font-family: 'IBM Plex Sans', sans-serif;
+            padding: 20px 16px 60px;
+        }
+
+        .head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 2px solid var(--ink);
+            padding-bottom: 14px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .head h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 22px;
+            margin: 0;
+        }
+
+        .head .meta {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            color: var(--ink-soft);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .view-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .today-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--ink);
+            color: var(--paper);
+            border: none;
+            padding: 10px 16px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .today-btn .count {
+            background: var(--oxide);
+            color: #fff;
+            padding: 1px 7px;
+            font-size: 11px;
+        }
+
+        .today-btn.in-today {
+            background: var(--blueprint);
+        }
+
+        .card-notes {
+            font-size: 12px;
+            color: var(--ink-soft);
+            font-style: italic;
+            margin: 0 0 8px;
+            padding-left: 8px;
+            border-left: 2px solid var(--line);
+        }
+
+        .edit-form textarea {
+            padding: 7px 8px;
+            border: 1px solid var(--line);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 13px;
+            resize: vertical;
+            min-height: 44px;
+        }
+
+        .alert-banner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            background: var(--oxide-light);
+            border: 1px solid var(--oxide);
+            color: var(--oxide);
+            padding: 10px 14px;
+            margin-bottom: 18px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .alert-banner strong {
+            font-weight: 600;
+        }
+
+        .section-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--ink-soft);
+            margin: 0 0 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-label button {
+            background: none;
+            border: none;
+            color: var(--blueprint);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10.5px;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .projects-strip {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+        }
+
+        .project-card {
+            flex: 0 0 210px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-top: 3px solid var(--steel);
+            padding: 12px 12px 10px;
+            cursor: pointer;
+        }
+
+        .project-card.active {
+            border-top-color: var(--ink);
+            box-shadow: inset 0 0 0 1px var(--ink);
+        }
+
+        .project-card.general {
+            border-top-color: var(--blueprint);
+        }
+
+        .project-card.overdue {
+            border-top-color: var(--oxide);
+        }
+
+        .project-card.done {
+            opacity: 0.6;
+        }
+
+        .project-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 13.5px;
+            margin: 0 0 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .project-client {
+            font-size: 11.5px;
+            color: var(--ink-soft);
+            margin: 0 0 8px;
+        }
+
+        .project-deadline {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            margin: 0 0 8px;
+            color: var(--ink-soft);
+        }
+
+        .project-deadline.overdue {
+            color: var(--oxide);
+            font-weight: 600;
+        }
+
+        .project-bar-track {
+            height: 4px;
+            background: var(--line);
+            margin-bottom: 6px;
+        }
+
+        .project-bar-fill {
+            height: 100%;
+            background: var(--olive);
+        }
+
+        .project-stats {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            color: var(--ink-soft);
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .project-areas {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .area-chip {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 9.5px;
+            padding: 1px 5px;
+            letter-spacing: 0.02em;
+        }
+
+        .add-project-card {
+            flex: 0 0 210px;
+            border: 1px dashed var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            color: var(--ink-soft);
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .add-project-card:hover {
+            border-color: var(--blueprint);
+            color: var(--blueprint);
+        }
+
+        .finished-badge {
+            font-size: 10px;
+            color: var(--olive);
+        }
+
+        .new-project-form {
+            display: none;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 22px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            padding: 14px;
+            align-items: center;
+        }
+
+        .new-project-form.show {
+            display: flex;
+        }
+
+        .new-project-form input {
+            padding: 9px 10px;
+            border: 1px solid var(--line);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 13px;
+        }
+
+        .new-project-form input[name=name] {
+            flex: 2;
+            min-width: 160px;
+        }
+
+        .new-project-form input[name=client] {
+            flex: 1.5;
+            min-width: 140px;
+        }
+
+        .new-project-form label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            color: var(--ink-soft);
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .new-project-form button {
+            padding: 9px 16px;
+            border: 1px solid var(--ink);
+            background: var(--ink);
+            color: var(--paper);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            cursor: pointer;
+            align-self: flex-end;
+        }
+
+        .new-project-form button.cancel {
+            background: var(--paper);
+            color: var(--ink-soft);
+            border-color: var(--line);
+        }
+
+        .active-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+        }
+
+        .active-head h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .active-head .sub {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            color: var(--ink-soft);
+        }
+
+        .project-toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+
+        .project-toolbar button {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10.5px;
+            text-transform: uppercase;
+            padding: 5px 10px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--ink-soft);
+            cursor: pointer;
+        }
+
+        .project-toolbar button.finalize {
+            border-color: var(--olive);
+            color: var(--olive);
+        }
+
+        .project-toolbar button.finalize:hover {
+            background: var(--olive-light);
+        }
+
+        .project-toolbar button.reopen {
+            border-color: var(--blueprint);
+            color: var(--blueprint);
+        }
+
+        .project-toolbar button.edit-btn {
+            border-color: var(--steel);
+        }
+
+        .project-toolbar button.danger {
+            border-color: var(--oxide-light);
+            color: var(--oxide);
+            margin-left: auto;
+        }
+
+        .project-toolbar button.danger:hover {
+            background: var(--oxide-light);
+        }
+
+        .add-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .add-bar input[type=text] {
+            flex: 2;
+            min-width: 180px;
+            padding: 10px 12px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 14px;
+        }
+
+        .add-bar input[type=text]:focus {
+            outline: none;
+            border-color: var(--blueprint);
+        }
+
+        .add-bar input.assignee {
+            flex: 1;
+            min-width: 110px;
+        }
+
+        .add-bar input[type=date] {
+            padding: 9px 8px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11.5px;
+            color: var(--ink-soft);
+        }
+
+        .add-bar select {
+            padding: 10px 8px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+        }
+
+        .add-bar button {
+            padding: 10px 18px;
+            border: 1px solid var(--ink);
+            background: var(--ink);
+            color: var(--paper);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        .add-bar button:hover {
+            background: var(--blueprint);
+            border-color: var(--blueprint);
+        }
+
+        .toolbar-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .area-filter {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .area-filter button {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            padding: 5px 10px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--ink-soft);
+            cursor: pointer;
+        }
+
+        .area-filter button.active {
+            border-color: var(--ink);
+            color: var(--ink);
+            background: var(--steel-light);
+        }
+
+        .sort-toggle {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            color: var(--ink-soft);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sort-toggle select {
+            padding: 5px 8px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+        }
+
+        @media (max-width:720px) {
+            .board {
+                grid-template-columns: 1fr;
+            }
+
+            .projects-strip {
+                flex-wrap: nowrap;
+            }
+        }
+
+        .col-head {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            border-bottom: 1.5px solid var(--ink);
+            padding-bottom: 8px;
+            margin-bottom: 14px;
+        }
+
+        .col-num {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            color: var(--steel);
+        }
+
+        .col-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .col-count {
+            margin-left: auto;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            color: var(--ink-soft);
+        }
+
+        .cards {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 40px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--steel);
+            padding: 12px 12px 10px;
+        }
+
+        .card.area-produccion {
+            border-left-color: var(--oxide);
+        }
+
+        .card.area-diseno {
+            border-left-color: var(--blueprint);
+        }
+
+        .card.area-gestion {
+            border-left-color: var(--plum);
+        }
+
+        .card.area-compras {
+            border-left-color: var(--amber);
+        }
+
+        .card.area-pedidos {
+            border-left-color: var(--teal);
+        }
+
+        .card.area-cotizacion {
+            border-left-color: var(--indigo);
+        }
+
+        .card.area-montaje {
+            border-left-color: var(--olive);
+        }
+
+        .card-title {
+            font-size: 14px;
+            line-height: 1.4;
+            margin: 0 0 6px;
+        }
+
+        .card-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10.5px;
+            color: var(--ink-soft);
+        }
+
+        .tag {
+            padding: 2px 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .tag.area-produccion {
+            background: var(--oxide-light);
+            color: var(--oxide);
+        }
+
+        .tag.area-diseno {
+            background: var(--blueprint-light);
+            color: var(--blueprint);
+        }
+
+        .tag.area-gestion {
+            background: var(--plum-light);
+            color: var(--plum);
+        }
+
+        .tag.area-compras {
+            background: var(--amber-light);
+            color: var(--amber);
+        }
+
+        .tag.area-pedidos {
+            background: var(--teal-light);
+            color: var(--teal);
+        }
+
+        .tag.area-cotizacion {
+            background: var(--indigo-light);
+            color: var(--indigo);
+        }
+
+        .tag.area-montaje {
+            background: var(--olive-light);
+            color: var(--olive);
+        }
+
+        .tag.urgent {
+            background: var(--oxide);
+            color: var(--paper);
+        }
+
+        .tag.due {
+            color: var(--ink-soft);
+        }
+
+        .tag.overdue {
+            background: var(--oxide);
+            color: var(--paper);
+        }
+
+        .tag.project-tag {
+            background: var(--steel-light);
+            color: var(--ink-soft);
+        }
+
+        .card-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px dashed var(--line);
+        }
+
+        .move-btns {
+            display: flex;
+            gap: 6px;
+        }
+
+        .move-btns button,
+        .del-btn,
+        .edit-btn-sm {
+            border: 1px solid var(--line);
+            background: none;
+            color: var(--ink-soft);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            padding: 3px 7px;
+            cursor: pointer;
+        }
+
+        .move-btns button:hover {
+            border-color: var(--blueprint);
+            color: var(--blueprint);
+        }
+
+        .move-btns button:disabled {
+            opacity: 0.25;
+            cursor: default;
+        }
+
+        .del-btn:hover {
+            border-color: var(--oxide);
+            color: var(--oxide);
+        }
+
+        .edit-btn-sm:hover {
+            border-color: var(--blueprint);
+            color: var(--blueprint);
+        }
+
+        .card-actions-right {
+            display: flex;
+            gap: 6px;
+        }
+
+        .empty {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            color: var(--steel);
+        }
+
+        /* edit form inside a card */
+        .edit-form {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .edit-form input,
+        .edit-form select {
+            padding: 7px 8px;
+            border: 1px solid var(--line);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 13px;
+        }
+
+        .edit-form .row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .edit-form .row-actions {
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+            margin-top: 2px;
+        }
+
+        .edit-form .row-actions button {
+            padding: 6px 12px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            cursor: pointer;
+            border: 1px solid var(--ink);
+            background: var(--ink);
+            color: var(--paper);
+        }
+
+        .edit-form .row-actions button.cancel {
+            background: var(--paper);
+            color: var(--ink-soft);
+            border-color: var(--line);
+        }
+
+        /* today view */
+        .today-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .today-item {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--steel);
+            padding: 12px;
+        }
+
+        .today-item.overdue {
+            border-left-color: var(--oxide);
+        }
+
+        .today-item .top-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            align-items: flex-start;
+        }
+
+        .today-item .title {
+            font-size: 14px;
+            margin: 0 0 6px;
+        }
+
+        .today-item .meta {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10.5px;
+            color: var(--ink-soft);
+        }
+
+        .done-btn {
+            border: 1px solid var(--olive);
+            color: var(--olive);
+            background: none;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            padding: 5px 10px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .done-btn:hover {
+            background: var(--olive-light);
+        }
+
+        /* week view */
+        .week-group {
+            margin-bottom: 20px;
+        }
+
+        .week-group-head {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--ink-soft);
+            border-bottom: 1px solid var(--line);
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            gap: 8px;
+            align-items: baseline;
+        }
+
+        .week-group-head .day-count {
+            margin-left: auto;
+            color: var(--steel);
+        }
+
+        /* calendar */
+        .cal-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .cal-head .cal-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 15px;
+            text-transform: capitalize;
+        }
+
+        .cal-head button {
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--ink-soft);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 13px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin-bottom: 20px;
+        }
+
+        .cal-dow {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 9.5px;
+            text-transform: uppercase;
+            color: var(--steel);
+            text-align: center;
+            padding-bottom: 4px;
+        }
+
+        .cal-day {
+            background: var(--card);
+            border: 1px solid var(--line);
+            min-height: 56px;
+            padding: 5px 5px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .cal-day.empty {
+            background: transparent;
+            border-color: transparent;
+            cursor: default;
+        }
+
+        .cal-day.today {
+            border-color: var(--ink);
+            border-width: 2px;
+        }
+
+        .cal-day.selected {
+            background: var(--steel-light);
+            box-shadow: inset 0 0 0 1px var(--ink);
+        }
+
+        .cal-day.overdue-day {
+            border-color: var(--oxide);
+        }
+
+        .cal-day-num {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            color: var(--ink-soft);
+        }
+
+        .cal-dots {
+            display: flex;
+            gap: 2px;
+            flex-wrap: wrap;
+        }
+
+        .cal-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .cal-dot.area-produccion {
+            background: var(--oxide);
+        }
+
+        .cal-dot.area-diseno {
+            background: var(--blueprint);
+        }
+
+        .cal-dot.area-gestion {
+            background: var(--plum);
+        }
+
+        .cal-dot.area-compras {
+            background: var(--amber);
+        }
+
+        .cal-dot.area-pedidos {
+            background: var(--teal);
+        }
+
+        .cal-dot.area-cotizacion {
+            background: var(--indigo);
+        }
+
+        .cal-dot.area-montaje {
+            background: var(--olive);
+        }
+
+        @media (max-width:520px) {
+            .cal-day {
+                min-height: 44px;
+            }
+        }
+
+        /* backup bar */
+        .backup-bar {
+            display: flex;
+            gap: 14px;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .backup-bar button {
+            background: none;
+            border: none;
+            color: var(--blueprint);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10.5px;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+        }
+
+        .import-box {
+            display: none;
+            gap: 8px;
+            margin-bottom: 16px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            padding: 12px;
+            flex-direction: column;
+        }
+
+        .import-box.show {
+            display: flex;
+        }
+
+        .import-box textarea {
+            min-height: 90px;
+            padding: 8px;
+            border: 1px solid var(--line);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+        }
+
+        .import-box .row-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .import-box .row-actions button {
+            padding: 6px 12px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            cursor: pointer;
+            border: 1px solid var(--ink);
+            background: var(--ink);
+            color: var(--paper);
+        }
+
+        .import-box .row-actions button.cancel {
+            background: var(--paper);
+            color: var(--ink-soft);
+            border-color: var(--line);
+        }
+
+        /* autosave */
+        .autosave-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .autosave-status {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10.5px;
+            color: var(--ink-soft);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .autosave-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--olive);
+        }
+
+        .autosave-dot.saving {
+            background: var(--amber);
+        }
+
+        .autosave-dot.error {
+            background: var(--oxide);
+        }
+
+        .save-now-btn {
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--ink-soft);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10.5px;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            cursor: pointer;
+        }
+
+        .save-now-btn:hover {
+            border-color: var(--blueprint);
+            color: var(--blueprint);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="head">
+        <h1>Tablero de proyectos</h1>
+        <div class="meta" id="today"></div>
+    </div>
+
+    <div class="autosave-bar">
+        <span class="autosave-status" id="autosave-status"><span class="autosave-dot" id="autosave-dot"></span><span
+                id="autosave-text">Guardado</span></span>
+        <button class="save-now-btn" id="save-now-btn">Guardar ahora</button>
+    </div>
+
+    <div class="backup-bar">
+        <button id="export-btn">⭳ exportar copia de respaldo</button>
+        <button id="import-toggle-btn">⭱ restaurar desde copia</button>
+    </div>
+    <div class="import-box" id="import-box">
+        <span class="section-label" style="margin:0;">Pega aquí el contenido de tu copia de respaldo</span>
+        <textarea id="import-textarea" placeholder="Pega el JSON exportado anteriormente..."></textarea>
+        <div class="row-actions">
+            <button class="cancel" id="import-cancel-btn" type="button">Cancelar</button>
+            <button id="import-confirm-btn" type="button">Restaurar</button>
+        </div>
+    </div>
+
+    <div class="view-buttons">
+        <button class="today-btn" id="today-toggle-btn"></button>
+        <button class="today-btn" id="week-toggle-btn"></button>
+        <button class="today-btn" id="cal-toggle-btn"></button>
+    </div>
+
+    <div id="alert-banner-holder"></div>
+
+    <div id="project-view">
+        <p class="section-label">
+            <span>Proyectos</span>
+            <button id="toggle-finished-btn">ver finalizados</button>
+        </p>
+        <div class="projects-strip" id="projects-strip"></div>
+        <div class="new-project-form" id="new-project-form">
+            <input type="text" name="name" placeholder="Nombre del proyecto">
+            <input type="text" name="client" placeholder="Institución / cliente">
+            <label>Entrega
+                <input type="date" name="deadline">
+            </label>
+            <button id="save-project-btn">Crear</button>
+            <button class="cancel" id="cancel-project-btn" type="button">Cancelar</button>
+        </div>
+
+        <div class="active-head">
+            <h2 id="active-name"></h2>
+            <span class="sub" id="active-sub"></span>
+        </div>
+        <div class="project-toolbar" id="project-toolbar"></div>
+
+        <div class="add-bar">
+            <input type="text" id="task-input" placeholder="Nueva tarea, p.ej. Cortar PTR 5x5 base sala 3">
+            <input type="text" class="assignee" id="assignee-input" placeholder="Responsable (opcional)">
+            <select id="area-input">
+                <option value="produccion">Producción</option>
+                <option value="diseno">Diseño</option>
+                <option value="gestion">Gestión</option>
+                <option value="compras">Compras</option>
+                <option value="pedidos">Pedidos</option>
+                <option value="cotizacion">Cotización</option>
+                <option value="montaje">Montaje</option>
+            </select>
+            <input type="date" id="due-input" title="Fecha de entrega de la tarea">
+            <select id="priority-input">
+                <option value="normal">Normal</option>
+                <option value="urgente">Urgente</option>
+            </select>
+            <input type="text" id="notes-input" placeholder="Nota rápida (opcional)" style="flex:2; min-width:180px;">
+            <button id="add-btn">Agregar</button>
+        </div>
+
+        <div class="toolbar-row">
+            <div class="area-filter" id="area-filter">
+                <button class="active" data-area="todas">Todas</button>
+                <button data-area="produccion">Producción</button>
+                <button data-area="diseno">Diseño</button>
+                <button data-area="gestion">Gestión</button>
+                <button data-area="compras">Compras</button>
+                <button data-area="pedidos">Pedidos</button>
+                <button data-area="cotizacion">Cotización</button>
+                <button data-area="montaje">Montaje</button>
+            </div>
+            <div class="sort-toggle">
+                ordenar por
+                <select id="sort-input">
+                    <option value="due">Fecha de entrega</option>
+                    <option value="created">Más reciente</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="board">
+            <div class="col" data-col="0">
+                <div class="col-head"><span class="col-num">01</span><span class="col-title">Por hacer</span><span
+                        class="col-count" id="count-0">0</span></div>
+                <div class="cards" id="cards-0"></div>
+            </div>
+            <div class="col" data-col="1">
+                <div class="col-head"><span class="col-num">02</span><span class="col-title">En curso</span><span
+                        class="col-count" id="count-1">0</span></div>
+                <div class="cards" id="cards-1"></div>
+            </div>
+            <div class="col" data-col="2">
+                <div class="col-head"><span class="col-num">03</span><span class="col-title">Hecho</span><span
+                        class="col-count" id="count-2">0</span></div>
+                <div class="cards" id="cards-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="today-view" style="display:none;">
+        <p class="section-label"><span>Tareas de hoy y vencidas</span></p>
+        <div class="today-list" id="today-list"></div>
+    </div>
+
+    <div id="week-view" style="display:none;">
+        <p class="section-label"><span>Resumen de la semana</span></p>
+        <div id="week-groups"></div>
+    </div>
+
+    <div id="calendar-view" style="display:none;">
+        <div class="cal-head">
+            <button id="cal-prev-btn">&larr;</button>
+            <span class="cal-title" id="cal-title"></span>
+            <button id="cal-next-btn">&rarr;</button>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <p class="section-label" id="cal-day-label" style="display:none;"></p>
+        <div class="today-list" id="cal-day-tasks"></div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'ale-projects-data-v2';
+        const AREA_ORDER = ['produccion', 'diseno', 'gestion', 'compras', 'pedidos', 'cotizacion', 'montaje'];
+        const AREA_LABEL = { produccion: 'Producción', diseno: 'Diseño', gestion: 'Gestión', compras: 'Compras', pedidos: 'Pedidos', cotizacion: 'Cotización', montaje: 'Montaje' };
+        const AREA_CODE = { produccion: 'PR', diseno: 'DI', gestion: 'GE', compras: 'CO', pedidos: 'PE', cotizacion: 'CZ', montaje: 'MO' };
+        let data = { projects: [], tasks: [] };
+        let activeProjectId = 'general';
+        let activeAreaFilter = 'todas';
+        let sortMode = 'due';
+        let showFinished = false;
+        let editingTaskId = null;
+        let editingProjectId = null;
+        let viewMode = 'project'; // 'project' | 'today' | 'week' | 'calendar'
+        let calYear = new Date().getFullYear();
+        let calMonth = new Date().getMonth(); // 0-indexed
+        let selectedCalDay = null;
+
+        const todayStr = () => new Date().toISOString().slice(0, 10);
+        document.getElementById('today').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+
+        async function loadData() {
+            try {
+                const res = await window.storage.get(STORAGE_KEY);
+                data = res ? JSON.parse(res.value) : { projects: [], tasks: [] };
+            } catch (e) { data = { projects: [], tasks: [] }; }
+            if (!data.projects) data.projects = [];
+            if (!data.tasks) data.tasks = [];
+            // backward compatibility: existing projects without status
+            data.projects.forEach(p => { if (!p.status) p.status = 'activo'; });
+            setAutosaveStatus('saved');
+            renderAll();
+        }
+
+        let saveInFlight = false;
+        let pendingResave = false;
+
+        function setAutosaveStatus(state) {
+            const dot = document.getElementById('autosave-dot');
+            const text = document.getElementById('autosave-text');
+            if (!dot || !text) return;
+            dot.classList.remove('saving', 'error');
+            if (state === 'saving') {
+                dot.classList.add('saving');
+                text.textContent = 'Guardando...';
+            } else if (state === 'error') {
+                dot.classList.add('error');
+                text.textContent = 'Error al guardar, reintentando';
+            } else {
+                const now = new Date();
+                const hh = String(now.getHours()).padStart(2, '0');
+                const mm = String(now.getMinutes()).padStart(2, '0');
+                text.textContent = `Guardado ${hh}:${mm}`;
+            }
+        }
+
+        async function saveData() {
+            if (saveInFlight) { pendingResave = true; return; }
+            saveInFlight = true;
+            setAutosaveStatus('saving');
+            const payload = JSON.stringify(data);
+            let attempts = 0;
+            let ok = false;
+            while (attempts < 3 && !ok) {
+                attempts++;
+                try {
+                    await window.storage.set(STORAGE_KEY, payload);
+                    ok = true;
+                } catch (e) {
+                    console.error('Error al guardar (intento ' + attempts + ')', e);
+                    if (attempts < 3) await new Promise(r => setTimeout(r, 600 * attempts));
+                }
+            }
+            saveInFlight = false;
+            setAutosaveStatus(ok ? 'saved' : 'error');
+            if (pendingResave) {
+                pendingResave = false;
+                saveData();
+            }
+        }
+
+        function projectTasks(pid) { return data.tasks.filter(t => t.projectId === pid); }
+
+        function fmtDate(iso) {
+            if (!iso) return '';
+            const [y, m, d] = iso.split('-');
+            return `${d}/${m}/${y.slice(2)}`;
+        }
+
+        function isOverdue(iso, col) { return iso && col !== 2 && iso < todayStr(); }
+        function isDueToday(iso, col) { return iso && col !== 2 && iso === todayStr(); }
+
+        function projectName(pid) {
+            if (pid === 'general') return 'Tareas generales';
+            const p = data.projects.find(x => x.id === pid);
+            return p ? p.name : '—';
+        }
+
+        function sortedProjectList() {
+            const active = data.projects.filter(p => p.status !== 'finalizado');
+            const finished = data.projects.filter(p => p.status === 'finalizado');
+            const sortByDeadline = arr => {
+                const withD = arr.filter(p => p.deadline);
+                const withoutD = arr.filter(p => !p.deadline);
+                withD.sort((a, b) => a.deadline.localeCompare(b.deadline));
+                return [...withD, ...withoutD];
+            };
+            return showFinished ? [...sortByDeadline(active), ...sortByDeadline(finished)] : sortByDeadline(active);
+        }
+
+        /* ---------- alert banner ---------- */
+        function renderAlertBanner() {
+            const overdueTasks = data.tasks.filter(t => isOverdue(t.due, t.col));
+            const todayTasks = data.tasks.filter(t => isDueToday(t.due, t.col));
+            const holder = document.getElementById('alert-banner-holder');
+            if (overdueTasks.length === 0 && todayTasks.length === 0) {
+                holder.innerHTML = '';
+                return;
+            }
+            const parts = [];
+            if (overdueTasks.length) parts.push(`<strong>${overdueTasks.length}</strong> vencida${overdueTasks.length > 1 ? 's' : ''}`);
+            if (todayTasks.length) parts.push(`<strong>${todayTasks.length}</strong> para hoy`);
+            holder.innerHTML = `<div class="alert-banner" id="alert-banner-el">⚠ ${parts.join(' · ')} — toca para ver</div>`;
+            document.getElementById('alert-banner-el').addEventListener('click', () => setViewMode('today'));
+        }
+
+        function weekWindowDates() {
+            const dates = [];
+            const start = new Date();
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(start);
+                d.setDate(start.getDate() + i);
+                dates.push(d.toISOString().slice(0, 10));
+            }
+            return dates;
+        }
+
+        function renderTodayButton() {
+            const overdueTasks = data.tasks.filter(t => isOverdue(t.due, t.col));
+            const todayTasks = data.tasks.filter(t => isDueToday(t.due, t.col));
+            const total = overdueTasks.length + todayTasks.length;
+            const btn = document.getElementById('today-toggle-btn');
+            btn.classList.toggle('in-today', viewMode === 'today');
+            btn.innerHTML = viewMode === 'today'
+                ? '← volver a proyectos'
+                : `Ver tareas de hoy ${total ? '<span class="count">' + total + '</span>' : ''}`;
+
+            const weekDates = weekWindowDates();
+            const weekTasks = data.tasks.filter(t => t.col !== 2 && t.due && weekDates.includes(t.due));
+            const weekBtn = document.getElementById('week-toggle-btn');
+            weekBtn.classList.toggle('in-today', viewMode === 'week');
+            weekBtn.innerHTML = viewMode === 'week'
+                ? '← volver a proyectos'
+                : `Resumen semanal ${weekTasks.length ? '<span class="count">' + weekTasks.length + '</span>' : ''}`;
+
+            const calBtn = document.getElementById('cal-toggle-btn');
+            calBtn.classList.toggle('in-today', viewMode === 'calendar');
+            calBtn.innerHTML = viewMode === 'calendar' ? '← volver a proyectos' : 'Calendario';
+        }
+
+        function setViewMode(mode) {
+            viewMode = mode;
+            document.getElementById('project-view').style.display = mode === 'project' ? 'block' : 'none';
+            document.getElementById('today-view').style.display = mode === 'today' ? 'block' : 'none';
+            document.getElementById('week-view').style.display = mode === 'week' ? 'block' : 'none';
+            document.getElementById('calendar-view').style.display = mode === 'calendar' ? 'block' : 'none';
+            renderAll();
+        }
+
+        function tasksForDate(iso) {
+            return data.tasks.filter(t => t.col !== 2 && t.due === iso);
+        }
+
+        function renderCalendarView() {
+            const first = new Date(calYear, calMonth, 1);
+            const startWeekday = first.getDay(); // 0 = domingo
+            const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+            const monthLabel = first.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+            document.getElementById('cal-title').textContent = monthLabel;
+
+            const dows = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+            const grid = document.getElementById('cal-grid');
+            let html = dows.map(d => `<div class="cal-dow">${d}</div>`).join('');
+            for (let i = 0; i < startWeekday; i++) html += '<div class="cal-day empty"></div>';
+            for (let day = 1; day <= daysInMonth; day++) {
+                const iso = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const tasks = tasksForDate(iso);
+                const overdueHere = tasks.some(t => isOverdue(t.due, t.col));
+                const areasPresent = [...new Set(tasks.map(t => t.area))];
+                const classes = ['cal-day'];
+                if (iso === todayStr()) classes.push('today');
+                if (iso === selectedCalDay) classes.push('selected');
+                if (overdueHere) classes.push('overdue-day');
+                html += `
+      <div class="${classes.join(' ')}" onclick="selectCalDay('${iso}')">
+        <span class="cal-day-num">${day}</span>
+        <div class="cal-dots">${areasPresent.map(a => `<span class="cal-dot area-${a}"></span>`).join('')}</div>
+      </div>
+    `;
+            }
+            grid.innerHTML = html;
+
+            const label = document.getElementById('cal-day-label');
+            const taskList = document.getElementById('cal-day-tasks');
+            if (!selectedCalDay) {
+                label.style.display = 'none';
+                taskList.innerHTML = '';
+                return;
+            }
+            label.style.display = 'block';
+            const d = new Date(selectedCalDay + 'T00:00:00');
+            label.textContent = d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+            const tasks = tasksForDate(selectedCalDay);
+            if (tasks.length === 0) {
+                taskList.innerHTML = '<div class="empty">Sin tareas con esa fecha de entrega.</div>';
+                return;
+            }
+            taskList.innerHTML = tasks.map(t => `
+    <div class="today-item ${isOverdue(t.due, t.col) ? 'overdue' : ''}">
+      <div class="top-row">
+        <div>
+          <p class="title">${escapeHtml(t.title)}</p>
+          <div class="meta">
+            <span class="tag project-tag">${escapeHtml(projectName(t.projectId))}</span>
+            <span class="tag area-${t.area}">${escapeHtml(AREA_LABEL[t.area] || t.area)}</span>
+            ${t.assignee ? '<span>' + escapeHtml(t.assignee) + '</span>' : ''}
+            ${t.priority === 'urgente' ? '<span class="tag urgent">urgente</span>' : ''}
+          </div>
+          ${t.notes ? `<p class="card-notes">${escapeHtml(t.notes)}</p>` : ''}
+        </div>
+        <button class="done-btn" onclick="markDoneFromToday('${t.id}')">marcar hecho</button>
+      </div>
+    </div>
+  `).join('');
+        }
+
+        function selectCalDay(iso) {
+            selectedCalDay = selectedCalDay === iso ? null : iso;
+            renderCalendarView();
+        }
+
+        function calPrevMonth() {
+            calMonth--;
+            if (calMonth < 0) { calMonth = 11; calYear--; }
+            selectedCalDay = null;
+            renderCalendarView();
+        }
+
+        function calNextMonth() {
+            calMonth++;
+            if (calMonth > 11) { calMonth = 0; calYear++; }
+            selectedCalDay = null;
+            renderCalendarView();
+        }
+
+        function renderTodayView() {
+            const list = data.tasks
+                .filter(t => t.col !== 2 && t.due && t.due <= todayStr())
+                .sort((a, b) => a.due.localeCompare(b.due));
+            const container = document.getElementById('today-list');
+            if (list.length === 0) {
+                container.innerHTML = '<div class="empty">No tienes tareas vencidas ni para hoy. 🎉</div>';
+                return;
+            }
+            container.innerHTML = list.map(t => `
+    <div class="today-item ${isOverdue(t.due, t.col) ? 'overdue' : ''}">
+      <div class="top-row">
+        <div>
+          <p class="title">${escapeHtml(t.title)}</p>
+          <div class="meta">
+            <span class="tag project-tag">${escapeHtml(projectName(t.projectId))}</span>
+            <span class="tag area-${t.area}">${escapeHtml(AREA_LABEL[t.area] || t.area)}</span>
+            ${t.assignee ? '<span>' + escapeHtml(t.assignee) + '</span>' : ''}
+            <span class="tag ${isOverdue(t.due, t.col) ? 'overdue' : 'due'}">${isOverdue(t.due, t.col) ? 'vencida ' : 'entrega '}${fmtDate(t.due)}</span>
+            ${t.priority === 'urgente' ? '<span class="tag urgent">urgente</span>' : ''}
+          </div>
+          ${t.notes ? `<p class="card-notes">${escapeHtml(t.notes)}</p>` : ''}
+        </div>
+        <button class="done-btn" onclick="markDoneFromToday('${t.id}')">marcar hecho</button>
+      </div>
+    </div>
+  `).join('');
+        }
+
+        function renderWeekView() {
+            const weekDates = weekWindowDates();
+            const container = document.getElementById('week-groups');
+            const groups = weekDates.map(dateIso => {
+                const tasks = data.tasks
+                    .filter(t => t.col !== 2 && t.due === dateIso)
+                    .sort((a, b) => (a.priority === 'urgente' ? 0 : 1) - (b.priority === 'urgente' ? 0 : 1));
+                return { dateIso, tasks };
+            });
+            const anyTasks = groups.some(g => g.tasks.length > 0);
+            if (!anyTasks) {
+                container.innerHTML = '<div class="empty">No hay entregas programadas en los próximos 7 días.</div>';
+                return;
+            }
+            const dayLabel = iso => {
+                const d = new Date(iso + 'T00:00:00');
+                const label = d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'short' });
+                return iso === todayStr() ? label + ' (hoy)' : label;
+            };
+            container.innerHTML = groups.map(g => `
+    <div class="week-group">
+      <div class="week-group-head">
+        <span>${dayLabel(g.dateIso)}</span>
+        <span class="day-count">${g.tasks.length ? g.tasks.length + ' tarea' + (g.tasks.length > 1 ? 's' : '') : 'sin entregas'}</span>
+      </div>
+      ${g.tasks.length ? `<div class="today-list">${g.tasks.map(t => `
+        <div class="today-item">
+          <div class="top-row">
+            <div>
+              <p class="title">${escapeHtml(t.title)}</p>
+              <div class="meta">
+                <span class="tag project-tag">${escapeHtml(projectName(t.projectId))}</span>
+                <span class="tag area-${t.area}">${escapeHtml(AREA_LABEL[t.area] || t.area)}</span>
+                ${t.assignee ? '<span>' + escapeHtml(t.assignee) + '</span>' : ''}
+                ${t.priority === 'urgente' ? '<span class="tag urgent">urgente</span>' : ''}
+              </div>
+              ${t.notes ? `<p class="card-notes">${escapeHtml(t.notes)}</p>` : ''}
+            </div>
+            <button class="done-btn" onclick="markDoneFromToday('${t.id}')">marcar hecho</button>
+          </div>
+        </div>
+      `).join('')}</div>` : ''}
+    </div>
+  `).join('');
+        }
+
+        function markDoneFromToday(id) {
+            const t = data.tasks.find(x => x.id === id);
+            if (!t) return;
+            t.col = 2;
+            saveData();
+            renderAll();
+        }
+
+        /* ---------- projects ---------- */
+        function renderProjectsStrip() {
+            const strip = document.getElementById('projects-strip');
+            const ordered = [{ id: 'general', name: 'Tareas generales', client: 'Sin proyecto asignado', general: true, status: 'activo' }, ...sortedProjectList()];
+            strip.innerHTML = ordered.map(p => {
+                const tasks = projectTasks(p.id);
+                const done = tasks.filter(t => t.col === 2).length;
+                const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+                const overdue = p.deadline && p.deadline < todayStr() && pct < 100 && p.status !== 'finalizado';
+                const pendingByArea = AREA_ORDER
+                    .map(a => ({ a, n: tasks.filter(t => t.area === a && t.col !== 2).length }))
+                    .filter(x => x.n > 0);
+                return `
+      <div class="project-card ${p.id === activeProjectId ? 'active' : ''} ${p.general ? 'general' : ''} ${overdue ? 'overdue' : ''} ${p.status === 'finalizado' ? 'done' : ''}" onclick="selectProject('${p.id}')">
+        <p class="project-name">${escapeHtml(p.name)} ${p.status === 'finalizado' ? '<span class="finished-badge">✓ finalizado</span>' : ''}</p>
+        <p class="project-client">${escapeHtml(p.client || '')}</p>
+        ${p.deadline ? `<p class="project-deadline ${overdue ? 'overdue' : ''}">entrega ${fmtDate(p.deadline)}</p>` : (p.general ? '' : '<p class="project-deadline">sin fecha</p>')}
+        <div class="project-bar-track"><div class="project-bar-fill" style="width:${pct}%"></div></div>
+        <div class="project-stats"><span>${tasks.length} tareas</span><span>${pct}% hecho</span></div>
+        <div class="project-areas">${pendingByArea.map(x => `<span class="area-chip tag area-${x.a}">${AREA_CODE[x.a]}·${x.n}</span>`).join('')}</div>
+      </div>
+    `;
+            }).join('') + '<div class="add-project-card" id="add-project-trigger">+ nuevo proyecto</div>';
+            document.getElementById('add-project-trigger').addEventListener('click', () => {
+                editingProjectId = null;
+                const form = document.getElementById('new-project-form');
+                form.querySelectorAll('input').forEach(i => i.value = '');
+                document.getElementById('save-project-btn').textContent = 'Crear';
+                form.classList.toggle('show');
+            });
+            document.getElementById('toggle-finished-btn').textContent = showFinished ? 'ocultar finalizados' : 'ver finalizados';
+        }
+
+        function selectProject(pid) {
+            activeProjectId = pid;
+            activeAreaFilter = 'todas';
+            editingTaskId = null;
+            document.getElementById('new-project-form').classList.remove('show');
+            renderAll();
+        }
+
+        function renderActiveHead() {
+            const p = activeProjectId === 'general'
+                ? { id: 'general', name: 'Tareas generales', client: '', deadline: '', status: 'activo', general: true }
+                : data.projects.find(x => x.id === activeProjectId);
+            document.getElementById('active-name').textContent = p.name;
+            document.getElementById('active-sub').textContent = [p.client, p.deadline ? 'entrega ' + fmtDate(p.deadline) : ''].filter(Boolean).join(' · ');
+
+            const toolbar = document.getElementById('project-toolbar');
+            if (p.general) {
+                toolbar.innerHTML = '';
+                return;
+            }
+            if (p.status === 'finalizado') {
+                toolbar.innerHTML = `
+      <button class="reopen" onclick="reopenProject()">↺ reabrir proyecto</button>
+      <button class="edit-btn" onclick="startEditProject()">editar</button>
+      <button class="danger" onclick="deleteProject()">eliminar proyecto</button>
+    `;
+            } else {
+                toolbar.innerHTML = `
+      <button class="finalize" onclick="finalizeProject()">✓ finalizar proyecto</button>
+      <button class="edit-btn" onclick="startEditProject()">editar</button>
+      <button class="danger" onclick="deleteProject()">eliminar proyecto</button>
+    `;
+            }
+        }
+
+        function finalizeProject() {
+            const p = data.projects.find(x => x.id === activeProjectId);
+            if (!p) return;
+            p.status = 'finalizado';
+            saveData();
+            renderAll();
+        }
+
+        function reopenProject() {
+            const p = data.projects.find(x => x.id === activeProjectId);
+            if (!p) return;
+            p.status = 'activo';
+            saveData();
+            renderAll();
+        }
+
+        function startEditProject() {
+            const p = data.projects.find(x => x.id === activeProjectId);
+            if (!p) return;
+            editingProjectId = p.id;
+            const form = document.getElementById('new-project-form');
+            form.querySelector('[name=name]').value = p.name;
+            form.querySelector('[name=client]').value = p.client || '';
+            form.querySelector('[name=deadline]').value = p.deadline || '';
+            document.getElementById('save-project-btn').textContent = 'Guardar cambios';
+            form.classList.add('show');
+            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function addOrUpdateProject() {
+            const form = document.getElementById('new-project-form');
+            const name = form.querySelector('[name=name]').value.trim();
+            const client = form.querySelector('[name=client]').value.trim();
+            const deadline = form.querySelector('[name=deadline]').value;
+            if (!name) return;
+            if (editingProjectId) {
+                const p = data.projects.find(x => x.id === editingProjectId);
+                if (p) { p.name = name; p.client = client; p.deadline = deadline; }
+                editingProjectId = null;
+            } else {
+                const id = 'p' + Date.now();
+                data.projects.push({ id, name, client, deadline, status: 'activo' });
+                activeProjectId = id;
+            }
+            form.querySelectorAll('input').forEach(i => i.value = '');
+            form.classList.remove('show');
+            document.getElementById('save-project-btn').textContent = 'Crear';
+            saveData();
+            renderAll();
+        }
+
+        function cancelProjectForm() {
+            editingProjectId = null;
+            const form = document.getElementById('new-project-form');
+            form.querySelectorAll('input').forEach(i => i.value = '');
+            form.classList.remove('show');
+            document.getElementById('save-project-btn').textContent = 'Crear';
+        }
+
+        function deleteProject() {
+            if (activeProjectId === 'general') return;
+            if (!confirm('¿Eliminar este proyecto y todas sus tareas? Esta acción no se puede deshacer.')) return;
+            data.projects = data.projects.filter(p => p.id !== activeProjectId);
+            data.tasks = data.tasks.filter(t => t.projectId !== activeProjectId);
+            activeProjectId = 'general';
+            saveData();
+            renderAll();
+        }
+
+        /* ---------- tasks ---------- */
+        function addTask() {
+            const title = document.getElementById('task-input').value.trim();
+            const assignee = document.getElementById('assignee-input').value.trim();
+            const area = document.getElementById('area-input').value;
+            const due = document.getElementById('due-input').value;
+            const priority = document.getElementById('priority-input').value;
+            const notes = document.getElementById('notes-input').value.trim();
+            if (!title) return;
+            data.tasks.push({
+                id: 't' + Date.now(),
+                title, assignee, area, due, priority, notes,
+                projectId: activeProjectId,
+                col: 0,
+                createdAt: Date.now()
+            });
+            document.getElementById('task-input').value = '';
+            document.getElementById('assignee-input').value = '';
+            document.getElementById('due-input').value = '';
+            document.getElementById('notes-input').value = '';
+            saveData();
+            renderAll();
+        }
+
+        function moveTask(id, dir) {
+            const t = data.tasks.find(x => x.id === id);
+            if (!t) return;
+            const newCol = t.col + dir;
+            if (newCol < 0 || newCol > 2) return;
+            t.col = newCol;
+            saveData();
+            renderAll();
+        }
+
+        function deleteTask(id) {
+            if (!confirm('¿Eliminar esta tarea?')) return;
+            data.tasks = data.tasks.filter(x => x.id !== id);
+            saveData();
+            renderAll();
+        }
+
+        function startEditTask(id) {
+            editingTaskId = id;
+            renderBoard();
+        }
+
+        function cancelEditTask() {
+            editingTaskId = null;
+            renderBoard();
+        }
+
+        function saveEditTask(id) {
+            const t = data.tasks.find(x => x.id === id);
+            if (!t) return;
+            const wrap = document.getElementById('edit-' + id);
+            t.title = wrap.querySelector('.f-title').value.trim() || t.title;
+            t.assignee = wrap.querySelector('.f-assignee').value.trim();
+            t.area = wrap.querySelector('.f-area').value;
+            t.due = wrap.querySelector('.f-due').value;
+            t.priority = wrap.querySelector('.f-priority').value;
+            t.notes = wrap.querySelector('.f-notes').value.trim();
+            editingTaskId = null;
+            saveData();
+            renderAll();
+        }
+
+        function setAreaFilter(area) {
+            activeAreaFilter = area;
+            document.querySelectorAll('#area-filter button').forEach(b => b.classList.toggle('active', b.dataset.area === area));
+            renderBoard();
+        }
+
+        function sortTasks(list) {
+            if (sortMode === 'due') {
+                return [...list].sort((a, b) => {
+                    if (a.due && b.due) return a.due.localeCompare(b.due);
+                    if (a.due) return -1;
+                    if (b.due) return 1;
+                    return a.createdAt - b.createdAt;
+                });
+            }
+            return [...list].sort((a, b) => b.createdAt - a.createdAt);
+        }
+
+        function areaOptions(selected) {
+            return AREA_ORDER.map(a => `<option value="${a}" ${a === selected ? 'selected' : ''}>${AREA_LABEL[a]}</option>`).join('');
+        }
+
+        function renderBoard() {
+            let tasks = projectTasks(activeProjectId);
+            if (activeAreaFilter !== 'todas') tasks = tasks.filter(t => t.area === activeAreaFilter);
+            [0, 1, 2].forEach(idx => {
+                const container = document.getElementById('cards-' + idx);
+                const colTasks = sortTasks(tasks.filter(t => t.col === idx));
+                document.getElementById('count-' + idx).textContent = colTasks.length;
+                if (colTasks.length === 0) {
+                    container.innerHTML = '<div class="empty">Sin tareas</div>';
+                    return;
+                }
+                container.innerHTML = colTasks.map(t => {
+                    if (editingTaskId === t.id) {
+                        return `
+        <div class="card area-${t.area}" id="edit-${t.id}">
+          <div class="edit-form">
+            <input class="f-title" type="text" value="${escapeAttr(t.title)}">
+            <div class="row">
+              <input class="f-assignee" type="text" placeholder="Responsable" value="${escapeAttr(t.assignee || '')}" style="flex:1;">
+              <input class="f-due" type="date" value="${t.due || ''}">
+            </div>
+            <div class="row">
+              <select class="f-area">${areaOptions(t.area)}</select>
+              <select class="f-priority">
+                <option value="normal" ${t.priority === 'normal' ? 'selected' : ''}>Normal</option>
+                <option value="urgente" ${t.priority === 'urgente' ? 'selected' : ''}>Urgente</option>
+              </select>
+            </div>
+            <textarea class="f-notes" placeholder="Nota rápida (opcional)">${escapeHtml(t.notes || '')}</textarea>
+            <div class="row-actions">
+              <button class="cancel" onclick="cancelEditTask()">Cancelar</button>
+              <button onclick="saveEditTask('${t.id}')">Guardar</button>
+            </div>
+          </div>
+        </div>`;
+                    }
+                    const overdue = isOverdue(t.due, t.col);
+                    return `
+      <div class="card area-${t.area}">
+        <p class="card-title">${escapeHtml(t.title)}</p>
+        <div class="card-meta">
+          <span class="tag area-${t.area}">${escapeHtml(AREA_LABEL[t.area] || t.area)}</span>
+          ${t.assignee ? '<span>' + escapeHtml(t.assignee) + '</span>' : ''}
+          ${t.due ? `<span class="tag ${overdue ? 'overdue' : 'due'}">${overdue ? 'vencida ' : 'entrega '}${fmtDate(t.due)}</span>` : ''}
+          ${t.priority === 'urgente' ? '<span class="tag urgent">urgente</span>' : ''}
+        </div>
+        ${t.notes ? `<p class="card-notes">${escapeHtml(t.notes)}</p>` : ''}
+        <div class="card-actions">
+          <div class="move-btns">
+            <button onclick="moveTask('${t.id}', -1)" ${idx === 0 ? 'disabled' : ''}>&larr;</button>
+            <button onclick="moveTask('${t.id}', 1)" ${idx === 2 ? 'disabled' : ''}>&rarr;</button>
+          </div>
+          <div class="card-actions-right">
+            <button class="edit-btn-sm" onclick="startEditTask('${t.id}')">editar</button>
+            <button class="del-btn" onclick="deleteTask('${t.id}')">eliminar</button>
+          </div>
+        </div>
+      </div>
+    `;
+                }).join('');
+            });
+        }
+
+        function renderAll() {
+            renderTodayButton();
+            renderAlertBanner();
+            if (viewMode === 'today') {
+                renderTodayView();
+                return;
+            }
+            if (viewMode === 'week') {
+                renderWeekView();
+                return;
+            }
+            if (viewMode === 'calendar') {
+                renderCalendarView();
+                return;
+            }
+            renderProjectsStrip();
+            renderActiveHead();
+            renderBoard();
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str || '';
+            return div.innerHTML;
+        }
+        function escapeAttr(str) {
+            return (str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        }
+
+        function exportBackup() {
+            const json = JSON.stringify(data, null, 2);
+            try {
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `respaldo-tablero-${todayStr()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                // fallback: show it in the import box so it can be copied manually
+                document.getElementById('import-box').classList.add('show');
+                document.getElementById('import-textarea').value = json;
+            }
+        }
+
+        function toggleImportBox() {
+            document.getElementById('import-box').classList.toggle('show');
+        }
+
+        function confirmImport() {
+            const raw = document.getElementById('import-textarea').value.trim();
+            if (!raw) return;
+            let parsed;
+            try {
+                parsed = JSON.parse(raw);
+            } catch (e) {
+                alert('Ese texto no es un JSON válido. Revisa que hayas copiado la copia completa.');
+                return;
+            }
+            if (!parsed.projects || !parsed.tasks) {
+                alert('El archivo no tiene el formato esperado (projects/tasks).');
+                return;
+            }
+            if (!confirm('Esto reemplazará todos los datos actuales del tablero con los de la copia. ¿Continuar?')) return;
+            parsed.projects.forEach(p => { if (!p.status) p.status = 'activo'; });
+            data = parsed;
+            saveData();
+            document.getElementById('import-box').classList.remove('show');
+            document.getElementById('import-textarea').value = '';
+            renderAll();
+        }
+
+        document.getElementById('add-btn').addEventListener('click', addTask);
+        document.getElementById('task-input').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+        document.getElementById('save-project-btn').addEventListener('click', addOrUpdateProject);
+        document.getElementById('cancel-project-btn').addEventListener('click', cancelProjectForm);
+        document.getElementById('sort-input').addEventListener('change', e => { sortMode = e.target.value; renderBoard(); });
+        document.getElementById('toggle-finished-btn').addEventListener('click', () => { showFinished = !showFinished; renderProjectsStrip(); });
+        document.getElementById('today-toggle-btn').addEventListener('click', () => setViewMode(viewMode === 'today' ? 'project' : 'today'));
+        document.getElementById('week-toggle-btn').addEventListener('click', () => setViewMode(viewMode === 'week' ? 'project' : 'week'));
+        document.getElementById('cal-toggle-btn').addEventListener('click', () => setViewMode(viewMode === 'calendar' ? 'project' : 'calendar'));
+        document.getElementById('cal-prev-btn').addEventListener('click', calPrevMonth);
+        document.getElementById('cal-next-btn').addEventListener('click', calNextMonth);
+        document.getElementById('export-btn').addEventListener('click', exportBackup);
+        document.getElementById('import-toggle-btn').addEventListener('click', toggleImportBox);
+        document.getElementById('import-cancel-btn').addEventListener('click', toggleImportBox);
+        document.getElementById('import-confirm-btn').addEventListener('click', confirmImport);
+        document.getElementById('save-now-btn').addEventListener('click', saveData);
+
+        // refuerzo de autoguardado: además de guardar tras cada cambio,
+        // re-guarda cada 20s, y al minimizar/cerrar la pestaña, como respaldo extra
+        setInterval(() => { if (!saveInFlight) saveData(); }, 20000);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') saveData();
+        });
+        window.addEventListener('beforeunload', () => { saveData(); });
+        document.querySelectorAll('#area-filter button').forEach(b => {
+            b.addEventListener('click', () => setAreaFilter(b.dataset.area));
+        });
+
+        loadData();
+    </script>
+
+</body>
+
+</html>
