@@ -1,0 +1,11 @@
+{
+  "name": "pme-plataforma",
+  "private": true,
+  "description": "PME — Plataforma operativa. Frontend estático (index.html + app.js), sin build step. Este package.json solo existe para el script de seed del emulador local.",
+  "scripts": {
+    "seed:emulator": "node scripts/seed-bootstrap-emulator.js"
+  },
+  "devDependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}

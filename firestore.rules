@@ -1,0 +1,102 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function userExists() {
+      return signedIn() && exists(userPath(request.auth.uid));
+    }
+
+    function me() {
+      return get(userPath(request.auth.uid)).data;
+    }
+
+    // Un usuario "activo" es el único que puede leer/escribir datos
+    // operativos. pending y revoked quedan bloqueados por igual.
+    function active() {
+      return userExists() && me().status == 'active';
+    }
+
+    function admin() {
+      return active() && me().role == 'admin';
+    }
+
+    // El primer inicio de sesión de un correo listado en
+    // config/bootstrap.adminEmails se autoaprueba como admin. Es el único
+    // arranque posible del sistema: nadie más puede volverse admin sin que
+    // un admin ya activo lo apruebe (ver reglas de /users abajo).
+    function bootstrapAdmin() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/config/bootstrap) &&
+        request.auth.token.email in
+          get(/databases/$(database)/documents/config/bootstrap).data.adminEmails;
+    }
+
+    // Documentos de configuración: legibles por cualquier usuario con
+    // sesión (para poder evaluar bootstrapAdmin en el propio cliente),
+    // nunca editables desde la app — se administran a mano (consola/CLI).
+    match /config/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /users/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || admin());
+      allow list: if admin();
+
+      // Alta del propio usuario en el primer login. pending/collaborator
+      // por defecto; active/admin solo si el correo está en el bootstrap.
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.status == (bootstrapAdmin() ? 'active' : 'pending')
+        && request.resource.data.role == (bootstrapAdmin() ? 'admin' : 'collaborator');
+
+      // Un admin puede editar cualquier campo de cualquier usuario
+      // (aprobar, asignar área/rol, revocar, reactivar). Un usuario puede
+      // actualizar su propio documento (ej. nombre/foto tras un nuevo
+      // login) pero nunca su propio role, status ni area.
+      allow update: if admin() || (
+        signedIn() && request.auth.uid == uid &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.status == resource.data.status &&
+        request.resource.data.area == resource.data.area
+      );
+
+      allow delete: if admin();
+    }
+
+    match /projects/{id} {
+      allow read: if active();
+      allow write: if admin();
+    }
+
+    match /tasks/{id} {
+      allow read: if active();
+      allow write: if admin();
+    }
+
+    match /incidents/{id} {
+      allow read: if active();
+      // Cualquier usuario activo puede reportar, siempre como abierta y
+      // atribuida a sí mismo. Solo un admin puede editar, resolver o
+      // eliminar (las incidencias resueltas se conservan como historial).
+      allow create: if active()
+        && request.resource.data.reportedByUid == request.auth.uid
+        && request.resource.data.status == 'open';
+      allow update, delete: if admin();
+    }
+
+    match /notes/{id} {
+      allow read: if active();
+      allow create: if active() && request.resource.data.authorUid == request.auth.uid;
+      allow update, delete: if admin();
+    }
+  }
+}
