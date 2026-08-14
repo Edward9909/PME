@@ -337,7 +337,7 @@
 
         .add-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
         .add-bar input[type=text] { flex: 2; min-width: 180px; padding: 10px 12px; border: 1px solid var(--line); background: var(--card); font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; }
-        .add-bar input.assignee { flex: 1; min-width: 110px; }
+        .add-bar .assignee { flex: 1; min-width: 130px; }
         .add-bar input[type=date] { padding: 9px 8px; border: 1px solid var(--line); background: var(--card); font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--ink-soft); }
         .add-bar select { padding: 10px 8px; border: 1px solid var(--line); background: var(--card); font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
         .add-bar button { padding: 10px 18px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-transform: uppercase; cursor: pointer; }
@@ -629,6 +629,10 @@
 
         function areaOptions(selected) {
             return AREA_ORDER.map(a => `<option value="${a}" ${a === selected ? 'selected' : ''}>${AREA_LABEL[a]}</option>`).join('');
+        }
+        function memberOptions(selected) {
+            const opts = TEAM.map(m => `<option value="${escapeAttr(m.name)}" ${m.name === selected ? 'selected' : ''}>${escapeHtml(m.name)} — ${AREA_LABEL[m.area]}</option>`).join('');
+            return `<option value="">— sin responsable —</option>` + opts;
         }
         function projectOptions(selected) {
             return allProjects().map(p => `<option value="${p.id}" ${p.id === selected ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('');
@@ -986,7 +990,7 @@
         <div class="project-toolbar" id="project-toolbar"></div>
         <div class="add-bar">
           <input type="text" id="task-input" placeholder="Nueva tarea, p.ej. Cortar PTR 5x5 base sala 3">
-          <input type="text" class="assignee" id="assignee-input" placeholder="Responsable (opcional)">
+          <select class="assignee" id="assignee-input">${memberOptions('')}</select>
           <select id="area-input">${areaOptions('produccion')}</select>
           <input type="date" id="due-input" title="Fecha de entrega de la tarea">
           <select id="priority-input"><option value="normal">Normal</option><option value="urgente">Urgente</option></select>
@@ -1173,7 +1177,7 @@
                 <div class="edit-form">
                   <input class="f-title" type="text" value="${escapeAttr(t.title)}">
                   <div class="row">
-                    <input class="f-assignee" type="text" placeholder="Responsable" value="${escapeAttr(t.assignee || '')}" style="flex:1;">
+                    <select class="f-assignee" style="flex:1;">${memberOptions(t.assignee)}</select>
                     <input class="f-due" type="date" value="${t.due || ''}">
                   </div>
                   <div class="row">
