@@ -75,9 +75,8 @@ function projectById(pid) { return allProjects().find(p => p.id === pid); }
 function projectName(pid) { const p = projectById(pid); return p ? p.name : '—'; }
 function taskById(tid) { return DATA.tasks.find(t => t.id === tid); }
 function projectTasks(pid) { return DATA.tasks.filter(t => t.projectId === pid); }
-function userById(uid) { return DATA.users.find(u => u.uid === uid); }
 function activeUsers() { return DATA.users.filter(u => u.status === 'active'); }
-function myTasks() { return DATA.tasks.filter(t => t.assigneeUid === currentUser.uid); }
+function myTasks() { return DATA.tasks.filter(t => (t.assignees || []).some(a => a.uid === currentUser.uid)); }
 
 function sortedProjectList() {
     const active = DATA.projects.filter(p => p.status !== 'finalizado');
@@ -94,9 +93,34 @@ function sortedProjectList() {
 function areaOptions(selected) {
     return AREA_ORDER.map(a => `<option value="${a}" ${a === selected ? 'selected' : ''}>${AREA_LABEL[a]}</option>`).join('');
 }
-function memberOptions(selectedUid) {
-    const opts = activeUsers().map(u => `<option value="${u.uid}" ${u.uid === selectedUid ? 'selected' : ''}>${escapeHtml(u.name)} — ${AREA_LABEL[u.area] || 'sin área'}</option>`).join('');
-    return `<option value="">— sin responsable —</option>` + opts;
+// Responsables de una tarea: uno o varios miembros registrados (con uid) y/o
+// personas externas sin cuenta (uid vacío, solo nombre libre — p.ej. un
+// servicio externo de montaje). "selected" es el arreglo t.assignees actual.
+function assigneesPickerHtml(prefix, selected) {
+    const sel = selected || [];
+    const selUids = new Set(sel.filter(a => a.uid).map(a => a.uid));
+    const externalNames = sel.filter(a => !a.uid).map(a => a.name).join(', ');
+    const chips = activeUsers().map(u => `
+      <label class="assignee-chip">
+        <input type="checkbox" class="assignee-member" value="${u.uid}" data-name="${escapeAttr(u.name)}" ${selUids.has(u.uid) ? 'checked' : ''}>
+        ${escapeHtml(u.name)}
+      </label>`).join('');
+    return `
+    <div class="assignees-picker" id="${prefix}-picker">
+      <div class="assignee-check-list">${chips || '<span style="font-size:11px;color:var(--ink-soft);">Sin colaboradores activos</span>'}</div>
+      <input type="text" class="assignee-external" placeholder="Otro responsable sin cuenta — separa varios con coma" value="${escapeAttr(externalNames)}">
+    </div>`;
+}
+
+function readAssignees(scopeEl) {
+    if (!scopeEl) return [];
+    const checked = [...scopeEl.querySelectorAll('.assignee-member:checked')]
+        .map(el => ({ uid: el.value, name: el.dataset.name }));
+    const externalInput = scopeEl.querySelector('.assignee-external');
+    const external = externalInput
+        ? externalInput.value.split(',').map(s => s.trim()).filter(Boolean).map(name => ({ uid: '', name }))
+        : [];
+    return [...checked, ...external];
 }
 function projectOptions(selected) {
     return allProjects().map(p => `<option value="${p.id}" ${p.id === selected ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('');
@@ -188,7 +212,13 @@ function ensureDataListeners() {
     unsubscribers.push(onSnapshot(collection(db, 'tasks'), snap => {
         DATA.tasks = snap.docs.map(d => {
             const v = d.data();
-            return { id: d.id, ...v, assignee: v.assigneeName || '' };
+            // Compatibilidad con tareas viejas creadas antes de soportar
+            // varios responsables: si no tienen "assignees" (arreglo), se
+            // reconstruye a partir de los campos únicos que sí tenían.
+            const assignees = Array.isArray(v.assignees) ? v.assignees
+                : (v.assigneeUid || v.assigneeName) ? [{ uid: v.assigneeUid || '', name: v.assigneeName || '' }] : [];
+            const assignee = assignees.map(a => a.name).filter(Boolean).join(', ');
+            return { id: d.id, ...v, assignees, assignee };
         });
         renderAll();
     }, err => console.error('tasks listener', err)));
@@ -890,11 +920,11 @@ function renderProjectBody() {
     body.innerHTML = `
     <div class="add-bar">
       <input type="text" id="task-input" placeholder="Nueva tarea, p.ej. Cortar PTR 5x5 base sala 3">
-      <select class="assignee" id="assignee-input">${memberOptions('')}</select>
       <select id="area-input">${areaOptions('produccion')}</select>
       <input type="date" id="due-input" title="Fecha de entrega de la tarea">
       <select id="priority-input"><option value="normal">Normal</option><option value="urgente">Urgente</option></select>
       <input type="text" id="notes-input" placeholder="Nota rápida (opcional)" style="flex:2; min-width:180px;">
+      ${assigneesPickerHtml('new-assignee', [])}
       <button id="add-btn">Agregar</button>
     </div>
     <div class="toolbar-row">
@@ -1065,20 +1095,21 @@ async function deleteProject() {
 
 async function addTask() {
     const title = document.getElementById('task-input').value.trim();
-    const assigneeUid = document.getElementById('assignee-input').value;
-    const assigneeName = assigneeUid ? ((userById(assigneeUid) || {}).name || '') : '';
+    const assignees = readAssignees(document.getElementById('new-assignee-picker'));
     const area = document.getElementById('area-input').value;
     const due = document.getElementById('due-input').value;
     const priority = document.getElementById('priority-input').value;
     const notes = document.getElementById('notes-input').value.trim();
     if (!title) return;
     await addDoc(collection(db, 'tasks'), {
-        title, assigneeUid: assigneeUid || '', assigneeName, area, due, priority, notes,
+        title, assignees, area, due, priority, notes,
         projectId: activeProjectId, col: 0, createdAt: Date.now(),
     });
     document.getElementById('task-input').value = '';
     document.getElementById('due-input').value = '';
     document.getElementById('notes-input').value = '';
+    document.querySelectorAll('#new-assignee-picker .assignee-member').forEach(c => c.checked = false);
+    document.querySelector('#new-assignee-picker .assignee-external').value = '';
 }
 
 async function moveTask(id, dir) {
@@ -1098,13 +1129,11 @@ function cancelEditTask() { editingTaskId = null; renderAll(); }
 async function saveEditTask(id) {
     const wrap = document.getElementById('edit-' + id);
     const t = taskById(id);
-    const assigneeUid = wrap.querySelector('.f-assignee').value;
-    const assigneeName = assigneeUid ? ((userById(assigneeUid) || {}).name || '') : '';
+    const assignees = readAssignees(document.getElementById('edit-' + id + '-picker'));
     const title = wrap.querySelector('.f-title').value.trim() || (t ? t.title : '');
     const patch = {
         title,
-        assigneeUid: assigneeUid || '',
-        assigneeName,
+        assignees,
         area: wrap.querySelector('.f-area').value,
         due: wrap.querySelector('.f-due').value,
         priority: wrap.querySelector('.f-priority').value,
@@ -1134,11 +1163,9 @@ function renderBoard() {
           <div class="card area-${t.area}" id="edit-${t.id}">
             <div class="edit-form">
               <input class="f-title" type="text" value="${escapeAttr(t.title)}">
+              ${assigneesPickerHtml('edit-' + t.id, t.assignees)}
               <div class="row">
-                <select class="f-assignee" style="flex:1;">${memberOptions(t.assigneeUid)}</select>
                 <input class="f-due" type="date" value="${t.due || ''}">
-              </div>
-              <div class="row">
                 <select class="f-area">${areaOptions(t.area)}</select>
                 <select class="f-priority"><option value="normal" ${t.priority === 'normal' ? 'selected' : ''}>Normal</option><option value="urgente" ${t.priority === 'urgente' ? 'selected' : ''}>Urgente</option></select>
               </div>
