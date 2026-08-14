@@ -56,6 +56,7 @@ let calMonth = new Date().getMonth();
 let selectedCalDay = null;
 let noteFormOpen = false;
 let incidentFormOpen = false;
+let showArchivedNotes = false;
 
 const DATA = { projects: [], tasks: [], incidents: [], notes: [], users: [] };
 let unsubscribers = [];
@@ -376,7 +377,7 @@ function tabBadge(n) { return n > 0 ? `<span class="tab-badge">${n}</span>` : ''
 function adminShell() {
     const proyectosCount = DATA.tasks.filter(t => isOverdue(t.due, t.col) || isDueToday(t.due, t.col)).length;
     const incidenciasCount = DATA.incidents.filter(i => i.status === 'open').length;
-    const notasCount = DATA.notes.filter(n => n.createdAt === todayStr()).length;
+    const notasCount = DATA.notes.filter(n => n.createdAt === todayStr() && !n.archived).length;
     const usuariosCount = DATA.users.filter(u => u.status === 'pending').length;
     return `
     <div class="backup-bar">
@@ -513,22 +514,36 @@ async function confirmResolveIncident(id) {
 }
 
 function notasView(isAdmin) {
-    const list = [...DATA.notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const list = [...DATA.notes]
+        .filter(n => showArchivedNotes || !n.archived)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     return `
-    <p class="section-label"><span>Notas del equipo</span></p>
+    <p class="section-label">
+      <span>Notas del equipo</span>
+      ${isAdmin ? `<button class="open-form-btn secondary" style="margin:0;padding:4px 10px;font-size:10.5px;" onclick="toggleArchivedNotes()">${showArchivedNotes ? 'ocultar archivadas' : 'ver archivadas'}</button>` : ''}
+    </p>
     ${list.length === 0 ? '<div class="empty">Sin notas todavía.</div>' : list.map(n => `
-      <div class="note-card">
+      <div class="note-card ${n.archived ? 'archived' : ''}">
         <div class="meta">
           <strong>${escapeHtml(n.author)}</strong>
           <span class="tag project-tag">${escapeHtml(projectName(n.projectId))}</span>
           ${n.taskId ? `<span>${escapeHtml((taskById(n.taskId) || {}).title || '')}</span>` : ''}
           <span>${fmtDate(n.createdAt)}</span>
+          ${n.archived ? '<span class="tag status-resolved">archivada</span>' : ''}
         </div>
         <p>${escapeHtml(n.text)}</p>
+        ${isAdmin ? `
+        <div class="card-actions" style="border-top:1px dashed var(--line); margin-top:8px; padding-top:8px; justify-content:flex-end;">
+          <button class="edit-btn-sm" onclick="${n.archived ? `unarchiveNote('${n.id}')` : `archiveNote('${n.id}')`}">${n.archived ? 'desarchivar' : 'archivar'}</button>
+        </div>` : ''}
       </div>
     `).join('')}
   `;
 }
+
+async function archiveNote(id) { await updateDoc(doc(db, 'notes', id), { archived: true }); }
+async function unarchiveNote(id) { await updateDoc(doc(db, 'notes', id), { archived: false }); }
+function toggleArchivedNotes() { showArchivedNotes = !showArchivedNotes; renderAll(); }
 
 /* ---------- pestaña Usuarios ---------- */
 function usuariosView() {
@@ -1182,6 +1197,7 @@ async function submitNote() {
         projectId: document.getElementById('note-project').value,
         taskId: document.getElementById('note-task').value,
         createdAt: todayStr(),
+        archived: false,
     });
     noteFormOpen = false;
     renderAll();
@@ -1226,6 +1242,7 @@ Object.assign(window, {
     moveTask, deleteTask, startEditTask, cancelEditTask, saveEditTask, markDone, selectCalDay,
     startResolveIncident, confirmResolveIncident, toggleNoteForm, toggleIncidentForm, submitNote, submitIncident,
     goToday, approveUser, saveUserFields, revokeUser, reactivateUser,
+    archiveNote, unarchiveNote, toggleArchivedNotes,
 });
 
 renderAll();

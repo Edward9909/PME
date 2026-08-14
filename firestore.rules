@@ -84,18 +84,28 @@ service cloud.firestore {
 
     match /incidents/{id} {
       allow read: if active();
-      // Cualquier usuario activo puede reportar, siempre como abierta y
-      // atribuida a sí mismo. Solo un admin puede editar, resolver o
-      // eliminar (las incidencias resueltas se conservan como historial).
-      allow create: if active()
+      // Un colaborador activo puede reportar, siempre como abierta y
+      // atribuida a sí mismo. Un admin puede crear cualquier incidencia sin
+      // esa restricción (lo necesita, por ejemplo, para restaurar un
+      // respaldo con incidencias de otras personas y ya resueltas). Solo un
+      // admin puede editar, resolver o eliminar (las resueltas se
+      // conservan como historial).
+      allow create: if admin() || (
+        active()
         && request.resource.data.reportedByUid == request.auth.uid
-        && request.resource.data.status == 'open';
+        && request.resource.data.status == 'open'
+      );
       allow update, delete: if admin();
     }
 
     match /notes/{id} {
       allow read: if active();
-      allow create: if active() && request.resource.data.authorUid == request.auth.uid;
+      // Igual que incidencias: un colaborador solo puede crear notas
+      // propias; un admin puede crear cualquiera (restaurar respaldo,
+      // etc.).
+      allow create: if admin() || (
+        active() && request.resource.data.authorUid == request.auth.uid
+      );
       allow update, delete: if admin();
     }
   }
