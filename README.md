@@ -16,9 +16,12 @@ mediante `firestore.rules` (nunca solo ocultando botones en el frontend).
   revocar acceso, reactivar).
 - **Dashboard Colaborador**: mis actividades, mis proyectos, crear nota,
   reportar incidencia — de solo lectura salvo notas e incidencias propias.
-- Autenticación con Google vía `signInWithRedirect` (no popup — más
-  confiable en celular, que es el dispositivo principal del equipo en el
-  taller).
+- Autenticación con Google vía `signInWithPopup`. Se probó primero con
+  `signInWithRedirect`, pero falla en producción de forma silenciosa (el
+  navegador debe conservar un marcador en almacenamiento local entre la
+  salida a Google y el regreso, y la protección de almacenamiento entre
+  sitios de Chrome/Safari lo rompe). `signInWithPopup` no depende de esa
+  persistencia — confirmado funcionando con cuenta real.
 - Flujo de aprobación: cualquiera puede iniciar sesión, pero queda
   `pending` hasta que un administrador le asigna área y lo aprueba. El
   primer administrador se define en `config/bootstrap.adminEmails` (ver
@@ -50,10 +53,8 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm run seed:emulator -- tu-correo-de-pru
 
 ## Despliegue a producción
 
-Proyecto Firebase aislado: `pme-plataforma`. Antes del primer deploy hacen
-falta dos pasos manuales de una sola vez (documentados con el enlace exacto
-en el MOC del proyecto en el vault): habilitar la API de Firestore y
-habilitar Google como proveedor de sign-in en Firebase Auth. Después:
+Proyecto Firebase aislado: `pme-plataforma`, ya desplegado en
+https://pme-plataforma.web.app. Para desplegar cambios nuevos:
 
 ```bash
 firebase deploy
