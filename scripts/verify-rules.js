@@ -85,6 +85,28 @@ async function main() {
         'allow'
     );
 
+    // --- NIP (segundo filtro) ---
+    await check(
+        'admin puede guardar su propio NIP (pinHash/pinSalt)',
+        admin.doc('users/admin1').update({ pinHash: 'h', pinSalt: 's' }),
+        'allow'
+    );
+    await check(
+        'admin puede restablecer el NIP de otro usuario',
+        admin.doc('users/collab1').update({ pinHash: null, pinSalt: null }),
+        'allow'
+    );
+    await check(
+        'colaborador NO puede restablecerse el rol a admin aunque intente junto con su propio NIP',
+        collab.doc('users/collab1').update({ pinHash: 'h', pinSalt: 's', role: 'admin' }),
+        'deny'
+    );
+    await check(
+        'colaborador SI puede guardar su propio NIP (sin tocar role/status/area)',
+        collab.doc('users/collab1').update({ pinHash: 'h', pinSalt: 's' }),
+        'allow'
+    );
+
     let ok = true;
     for (const [label, pass] of checks) {
         console.log((pass ? 'OK  ' : 'FAIL') + ' - ' + label);

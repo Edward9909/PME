@@ -242,6 +242,22 @@ function renderAll() {
     }
 
     if (currentUser.role === 'admin') {
+        // Segundo filtro solo para el panel administrador: si la sesión de
+        // Google se queda abierta en una computadora compartida, cualquiera
+        // que la use necesita además este NIP. No aplica a colaboradores
+        // (la especificación pide simplicidad extrema para ellos).
+        if (!currentUser.pinHash) {
+            root.innerHTML = createPinScreenHtml();
+            document.getElementById('pin-create-btn').addEventListener('click', submitCreatePin);
+            wirePinEnterKey('pin-new-2', submitCreatePin);
+            return;
+        }
+        if (!pinVerifiedFor(currentUser.uid)) {
+            root.innerHTML = enterPinScreenHtml();
+            document.getElementById('pin-enter-btn').addEventListener('click', submitEnterPin);
+            wirePinEnterKey('pin-enter', submitEnterPin);
+            return;
+        }
         root.innerHTML = adminShell();
         mountAdminTab();
     } else {
@@ -249,6 +265,11 @@ function renderAll() {
         renderAlertBannerFor(myTasks());
         mountCollabSections();
     }
+}
+
+function wirePinEnterKey(inputId, handler) {
+    const el = document.getElementById(inputId);
+    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') handler(); });
 }
 
 function renderSessionBar() {
@@ -287,6 +308,73 @@ function gateScreenHtml(status) {
       <h2>Cuenta creada</h2>
       <p>Tu cuenta ya existe pero todavía no fue aprobada. Un administrador debe asignarte un área para que puedas ver tus proyectos y tareas.</p>
     </div>`;
+}
+
+/* ---------- NIP (segundo filtro, solo administrador) ---------- */
+async function hashPin(pin, salt) {
+    const data = new TextEncoder().encode(salt + ':' + pin);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function pinVerifiedFor(uid) { return sessionStorage.getItem('pme_pin_ok_' + uid) === '1'; }
+function markPinVerified(uid) { sessionStorage.setItem('pme_pin_ok_' + uid, '1'); }
+
+function createPinScreenHtml() {
+    return `
+    <div class="gate-screen">
+      <span class="gate-badge">configura tu acceso</span>
+      <h2>Crea tu NIP</h2>
+      <p>Si dejas la sesión de Google abierta en una computadora compartida, cualquiera podría abrir el panel. Este NIP es una segunda verificación que se pedirá cada vez que abras la app en una pestaña o navegador nuevo. Elige de 4 a 6 dígitos.</p>
+      <input type="tel" inputmode="numeric" maxlength="6" id="pin-new-1" placeholder="Nuevo NIP" class="pin-input">
+      <input type="tel" inputmode="numeric" maxlength="6" id="pin-new-2" placeholder="Repite el NIP" class="pin-input">
+      <div class="pin-error" id="pin-error"></div>
+      <button class="google-btn" id="pin-create-btn">Guardar NIP</button>
+    </div>`;
+}
+
+function enterPinScreenHtml() {
+    return `
+    <div class="gate-screen">
+      <span class="gate-badge">verificación adicional</span>
+      <h2>Ingresa tu NIP</h2>
+      <p>Por seguridad, el panel administrativo también pide tu NIP en cada pestaña o navegador nuevo.</p>
+      <input type="tel" inputmode="numeric" maxlength="6" id="pin-enter" placeholder="NIP" class="pin-input">
+      <div class="pin-error" id="pin-error"></div>
+      <button class="google-btn" id="pin-enter-btn">Entrar</button>
+      <p style="font-size:10.5px; margin-top:14px;">¿Olvidaste tu NIP? Pídele a otro administrador que te lo restablezca desde la pestaña Usuarios, o contacta a soporte técnico.</p>
+    </div>`;
+}
+
+async function submitCreatePin() {
+    const p1 = document.getElementById('pin-new-1').value.trim();
+    const p2 = document.getElementById('pin-new-2').value.trim();
+    const err = document.getElementById('pin-error');
+    if (!/^\d{4,6}$/.test(p1)) { err.textContent = 'El NIP debe tener de 4 a 6 dígitos.'; return; }
+    if (p1 !== p2) { err.textContent = 'Los dos NIP no coinciden.'; return; }
+    const salt = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+    const hash = await hashPin(p1, salt);
+    await updateDoc(doc(db, 'users', currentUser.uid), { pinSalt: salt, pinHash: hash });
+    markPinVerified(currentUser.uid);
+    renderAll();
+}
+
+async function submitEnterPin() {
+    const p = document.getElementById('pin-enter').value.trim();
+    const err = document.getElementById('pin-error');
+    const hash = await hashPin(p, currentUser.pinSalt);
+    if (hash === currentUser.pinHash) {
+        markPinVerified(currentUser.uid);
+        renderAll();
+    } else {
+        err.textContent = 'NIP incorrecto.';
+        document.getElementById('pin-enter').value = '';
+    }
+}
+
+async function resetUserPin(uid) {
+    if (!confirm('¿Restablecer el NIP de este usuario? En su próximo inicio de sesión tendrá que crear uno nuevo.')) return;
+    await updateDoc(doc(db, 'users', uid), { pinHash: null, pinSalt: null });
 }
 
 /* ================= dashboard administrador ================= */
@@ -568,7 +656,7 @@ function usuariosView() {
         </select>
       ` : ''}
       ${kind === 'pending' ? `<button onclick="approveUser('${u.uid}')">aceptar</button>` : ''}
-      ${kind === 'active' ? `<button onclick="saveUserFields('${u.uid}')">guardar</button><button class="revoke" onclick="revokeUser('${u.uid}')">revocar acceso</button>` : ''}
+      ${kind === 'active' ? `<button onclick="saveUserFields('${u.uid}')">guardar</button>${u.role === 'admin' && u.pinHash ? `<button onclick="resetUserPin('${u.uid}')">restablecer NIP</button>` : ''}<button class="revoke" onclick="revokeUser('${u.uid}')">revocar acceso</button>` : ''}
       ${kind === 'revoked' ? `<button onclick="reactivateUser('${u.uid}')">reactivar</button>` : ''}
     </div>`;
 
@@ -1242,7 +1330,7 @@ Object.assign(window, {
     moveTask, deleteTask, startEditTask, cancelEditTask, saveEditTask, markDone, selectCalDay,
     startResolveIncident, confirmResolveIncident, toggleNoteForm, toggleIncidentForm, submitNote, submitIncident,
     goToday, approveUser, saveUserFields, revokeUser, reactivateUser,
-    archiveNote, unarchiveNote, toggleArchivedNotes,
+    archiveNote, unarchiveNote, toggleArchivedNotes, resetUserPin,
 });
 
 renderAll();
