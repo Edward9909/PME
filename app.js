@@ -6,7 +6,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
     getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection,
-    onSnapshot, serverTimestamp, connectFirestoreEmulator,
+    onSnapshot, serverTimestamp, connectFirestoreEmulator, writeBatch,
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -289,6 +289,88 @@ function gateScreenHtml(status) {
 }
 
 /* ================= dashboard administrador ================= */
+/* ---------- respaldo manual (exportar / restaurar) ---------- */
+function exportBackup() {
+    const payload = {
+        exportedAt: new Date().toISOString(),
+        projects: DATA.projects,
+        tasks: DATA.tasks,
+        incidents: DATA.incidents,
+        notes: DATA.notes,
+        users: DATA.users,
+    };
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `respaldo-pme-${todayStr()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+async function commitInChunks(ops) {
+    const CHUNK = 400;
+    for (let i = 0; i < ops.length; i += CHUNK) {
+        const batch = writeBatch(db);
+        for (const op of ops.slice(i, i + CHUNK)) {
+            const ref = doc(db, op.col, op.id);
+            if (op.type === 'delete') batch.delete(ref); else batch.set(ref, op.data);
+        }
+        await batch.commit();
+    }
+}
+
+// Restaura proyectos, tareas, incidencias y notas desde un respaldo exportado
+// con exportBackup(). Los usuarios registrados NUNCA se tocan aquí a propósito
+// -- un respaldo desactualizado no debe poder revocar ni recrear cuentas
+// reales de nadie.
+async function restoreBackup(fileInputEl) {
+    const file = fileInputEl.files[0];
+    if (!file) return;
+    let parsed;
+    try {
+        parsed = JSON.parse(await file.text());
+    } catch (e) {
+        alert('Ese archivo no es un JSON válido.');
+        fileInputEl.value = '';
+        return;
+    }
+    if (!Array.isArray(parsed.projects) || !Array.isArray(parsed.tasks)) {
+        alert('El archivo no tiene el formato de un respaldo de PME.');
+        fileInputEl.value = '';
+        return;
+    }
+    const confirmed = confirm(
+        'Esto va a REEMPLAZAR todos los proyectos, tareas, incidencias y notas ' +
+        'actuales por los del respaldo (del ' + (parsed.exportedAt ? new Date(parsed.exportedAt).toLocaleString('es-MX') : 'fecha desconocida') + '). ' +
+        'Los usuarios registrados no se modifican. Esta acción no se puede deshacer. ¿Continuar?'
+    );
+    if (!confirmed) { fileInputEl.value = ''; return; }
+
+    const COLLECTIONS = ['projects', 'tasks', 'incidents', 'notes'];
+    try {
+        const toDelete = [];
+        COLLECTIONS.forEach(col => DATA[col].forEach(item => toDelete.push({ type: 'delete', col, id: item.id })));
+        await commitInChunks(toDelete);
+
+        const toWrite = [];
+        COLLECTIONS.forEach(col => (parsed[col] || []).forEach(item => {
+            const { id, assignee, reportedBy, resolvedBy, author, ...data } = item;
+            if (id) toWrite.push({ type: 'set', col, id, data });
+        }));
+        await commitInChunks(toWrite);
+
+        alert('Respaldo restaurado correctamente.');
+    } catch (e) {
+        console.error('Error al restaurar el respaldo', e);
+        alert('Hubo un error al restaurar el respaldo: ' + e.message);
+    }
+    fileInputEl.value = '';
+}
+
 function tabBadge(n) { return n > 0 ? `<span class="tab-badge">${n}</span>` : ''; }
 
 function adminShell() {
@@ -297,6 +379,11 @@ function adminShell() {
     const notasCount = DATA.notes.filter(n => n.createdAt === todayStr()).length;
     const usuariosCount = DATA.users.filter(u => u.status === 'pending').length;
     return `
+    <div class="backup-bar">
+      <button id="export-backup-btn">⭳ exportar respaldo completo</button>
+      <button id="import-backup-trigger">⭱ restaurar desde respaldo</button>
+      <input type="file" id="import-backup-input" accept="application/json" style="display:none;">
+    </div>
     <div class="tabbar" id="admin-tabbar">
       <button data-tab="resumen">Resumen</button>
       <button data-tab="proyectos">Proyectos${tabBadge(proyectosCount)}</button>
@@ -309,6 +396,9 @@ function adminShell() {
 }
 
 function mountAdminTab() {
+    document.getElementById('export-backup-btn').addEventListener('click', exportBackup);
+    document.getElementById('import-backup-trigger').addEventListener('click', () => document.getElementById('import-backup-input').click());
+    document.getElementById('import-backup-input').addEventListener('change', e => restoreBackup(e.target));
     document.querySelectorAll('#admin-tabbar button').forEach(b => {
         b.classList.toggle('active', b.dataset.tab === adminTab);
         b.addEventListener('click', () => { adminTab = b.dataset.tab; renderAll(); });

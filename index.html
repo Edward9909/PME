@@ -101,6 +101,28 @@
 
         .session-bar button:hover { border-color: var(--oxide); color: var(--oxide); }
 
+        /* ---------- respaldo manual ---------- */
+        .backup-bar {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            margin-bottom: 12px;
+        }
+
+        .backup-bar button {
+            background: none;
+            border: none;
+            color: var(--blueprint);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10.5px;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+        }
+
+        .backup-bar button:hover { color: var(--oxide); }
+
         /* ---------- login / pendiente ---------- */
         .gate-screen {
             max-width: 420px;
