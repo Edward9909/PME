@@ -289,14 +289,20 @@ function gateScreenHtml(status) {
 }
 
 /* ================= dashboard administrador ================= */
+function tabBadge(n) { return n > 0 ? `<span class="tab-badge">${n}</span>` : ''; }
+
 function adminShell() {
+    const proyectosCount = DATA.tasks.filter(t => isOverdue(t.due, t.col) || isDueToday(t.due, t.col)).length;
+    const incidenciasCount = DATA.incidents.filter(i => i.status === 'open').length;
+    const notasCount = DATA.notes.filter(n => n.createdAt === todayStr()).length;
+    const usuariosCount = DATA.users.filter(u => u.status === 'pending').length;
     return `
     <div class="tabbar" id="admin-tabbar">
       <button data-tab="resumen">Resumen</button>
-      <button data-tab="proyectos">Proyectos</button>
-      <button data-tab="incidencias">Incidencias</button>
-      <button data-tab="notas">Notas</button>
-      <button data-tab="usuarios">Usuarios</button>
+      <button data-tab="proyectos">Proyectos${tabBadge(proyectosCount)}</button>
+      <button data-tab="incidencias">Incidencias${tabBadge(incidenciasCount)}</button>
+      <button data-tab="notas">Notas${tabBadge(notasCount)}</button>
+      <button data-tab="usuarios">Usuarios${tabBadge(usuariosCount)}</button>
     </div>
     <div id="admin-tab-content"></div>
   `;
