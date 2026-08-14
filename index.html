@@ -214,6 +214,22 @@
 
         .alert-banner strong { font-weight: 600; }
 
+        .report-banner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            background: var(--blueprint-light);
+            border: 1px solid var(--blueprint);
+            color: var(--blueprint);
+            padding: 10px 14px;
+            margin-bottom: 18px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
         /* ---------- admin tab bar ---------- */
         .tabbar {
             display: flex;
@@ -579,6 +595,14 @@
         .collab-section { margin-bottom: 28px; }
         .collab-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
         @media (max-width:720px) { .collab-cols { grid-template-columns: 1fr; } .indicator-grid { grid-template-columns: repeat(2,1fr); } }
+
+        @media print {
+            .session-bar, #alert-banner-holder, .tabbar, .projects-strip,
+            .new-project-form, .project-toolbar, .head .meta,
+            .print-hide { display: none !important; }
+            body { padding: 0; background: #fff; }
+            .card, .today-item, .incident-card, .note-card, .indicator-card { break-inside: avoid; }
+        }
     </style>
 </head>
 

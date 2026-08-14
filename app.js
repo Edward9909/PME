@@ -660,6 +660,35 @@ function projectBoardShellHtml() {
     </div>
     <div class="active-head"><h2 id="active-name"></h2><span class="sub" id="active-sub"></span></div>
     <div class="project-toolbar" id="project-toolbar"></div>
+    <div id="project-body"></div>
+  `;
+}
+
+function toggleFinished() { showFinished = !showFinished; renderAll(); }
+
+function mountProjectBoard() {
+    renderProjectsStrip();
+    renderActiveHead();
+    renderProjectBody();
+    document.getElementById('save-project-btn').addEventListener('click', addOrUpdateProject);
+    document.getElementById('cancel-project-btn').addEventListener('click', cancelProjectForm);
+}
+
+function activeProject() {
+    return activeProjectId === 'general' ? GENERAL_PROJECT : DATA.projects.find(x => x.id === activeProjectId);
+}
+
+// Un proyecto finalizado se archiva: en vez del tablero editable se muestra
+// un reporte de solo lectura (tareas, incidencias y notas de ese proyecto).
+// Para volver a editarlo hay que reabrirlo primero.
+function renderProjectBody() {
+    const p = activeProject();
+    const body = document.getElementById('project-body');
+    if (p && p.status === 'finalizado') {
+        body.innerHTML = projectReportHtml(p);
+        return;
+    }
+    body.innerHTML = `
     <div class="add-bar">
       <input type="text" id="task-input" placeholder="Nueva tarea, p.ej. Cortar PTR 5x5 base sala 3">
       <select class="assignee" id="assignee-input">${memberOptions('')}</select>
@@ -684,20 +713,61 @@ function projectBoardShellHtml() {
       <div class="col" data-col="2"><div class="col-head"><span class="col-num">03</span><span class="col-title">Hecho</span><span class="col-count" id="count-2">0</span></div><div class="cards" id="cards-2"></div></div>
     </div>
   `;
-}
-
-function toggleFinished() { showFinished = !showFinished; renderAll(); }
-
-function mountProjectBoard() {
-    renderProjectsStrip();
-    renderActiveHead();
-    renderBoard();
     document.getElementById('add-btn').addEventListener('click', addTask);
     document.getElementById('task-input').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
-    document.getElementById('save-project-btn').addEventListener('click', addOrUpdateProject);
-    document.getElementById('cancel-project-btn').addEventListener('click', cancelProjectForm);
     document.getElementById('sort-input').addEventListener('change', e => { sortMode = e.target.value; renderBoard(); });
     document.querySelectorAll('#area-filter button').forEach(b => b.addEventListener('click', () => { activeAreaFilter = b.dataset.area; document.querySelectorAll('#area-filter button').forEach(x => x.classList.toggle('active', x === b)); renderBoard(); }));
+    renderBoard();
+}
+
+function projectReportHtml(p) {
+    const tasks = projectTasks(p.id);
+    const done = tasks.filter(t => t.col === 2).length;
+    const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+    const incidents = DATA.incidents.filter(i => i.projectId === p.id).sort((a, b) => a.reportedAt.localeCompare(b.reportedAt));
+    const notes = DATA.notes.filter(n => n.projectId === p.id).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const openInc = incidents.filter(i => i.status === 'open').length;
+    const colLabel = ['Por hacer', 'En curso', 'Hecho'];
+
+    return `
+    <div class="report-banner">
+      📦 proyecto archivado${p.finalizedAt ? ` — finalizado el ${fmtDate(p.finalizedAt)}` : ''}
+    </div>
+    <div class="indicator-grid">
+      <div class="indicator-card"><div class="num">${tasks.length}</div><div class="label">Tareas totales</div></div>
+      <div class="indicator-card"><div class="num">${pct}%</div><div class="label">Completado</div></div>
+      <div class="indicator-card ${openInc ? 'warn' : ''}"><div class="num ${openInc ? 'warn-num' : ''}">${incidents.length}</div><div class="label">Incidencias (${openInc} sin resolver)</div></div>
+      <div class="indicator-card"><div class="num">${notes.length}</div><div class="label">Notas registradas</div></div>
+    </div>
+
+    <p class="section-label"><span>Tareas</span></p>
+    ${tasks.length === 0 ? '<div class="empty">Sin tareas registradas.</div>' : `<div class="today-list">${tasks.map(t => `
+      <div class="today-item">
+        <div class="top-row">
+          <div>
+            <p class="title">${escapeHtml(t.title)}</p>
+            <div class="meta">
+              <span class="tag area-${t.area}">${escapeHtml(AREA_LABEL[t.area] || t.area)}</span>
+              ${t.assignee ? `<span>${escapeHtml(t.assignee)}</span>` : ''}
+              <span class="tag ${t.col === 2 ? 'status-resolved' : 'status-open'}">${colLabel[t.col]}</span>
+            </div>
+            ${t.notes ? `<p class="card-notes">${escapeHtml(t.notes)}</p>` : ''}
+          </div>
+        </div>
+      </div>`).join('')}</div>`}
+
+    <p class="section-label" style="margin-top:22px;"><span>Incidencias</span></p>
+    ${incidents.length === 0 ? '<div class="empty">Sin incidencias registradas.</div>' : incidents.map(i => incidentCardHtml(i, false)).join('')}
+
+    <p class="section-label" style="margin-top:22px;"><span>Notas</span></p>
+    ${notes.length === 0 ? '<div class="empty">Sin notas registradas.</div>' : notes.map(n => `
+      <div class="note-card">
+        <div class="meta"><strong>${escapeHtml(n.author)}</strong><span>${fmtDate(n.createdAt)}</span></div>
+        <p>${escapeHtml(n.text)}</p>
+      </div>`).join('')}
+
+    <button class="open-form-btn secondary print-hide" style="margin-top:20px;" onclick="window.print()">Imprimir / exportar reporte</button>
+  `;
 }
 
 function renderProjectsStrip() {
@@ -731,7 +801,7 @@ function renderProjectsStrip() {
 function selectProject(pid) { activeProjectId = pid; activeAreaFilter = 'todas'; editingTaskId = null; renderAll(); }
 
 function renderActiveHead() {
-    const p = activeProjectId === 'general' ? GENERAL_PROJECT : DATA.projects.find(x => x.id === activeProjectId);
+    const p = activeProject();
     if (!p) { activeProjectId = 'general'; renderAll(); return; }
     document.getElementById('active-name').textContent = p.name;
     document.getElementById('active-sub').textContent = [p.client, p.deadline ? 'entrega ' + fmtDate(p.deadline) : ''].filter(Boolean).join(' · ');
@@ -748,7 +818,7 @@ function renderActiveHead() {
   `;
 }
 
-async function finalizeProject() { if (activeProjectId !== 'general') await updateDoc(doc(db, 'projects', activeProjectId), { status: 'finalizado' }); }
+async function finalizeProject() { if (activeProjectId !== 'general') await updateDoc(doc(db, 'projects', activeProjectId), { status: 'finalizado', finalizedAt: todayStr() }); }
 async function reopenProject() { if (activeProjectId !== 'general') await updateDoc(doc(db, 'projects', activeProjectId), { status: 'activo' }); }
 
 function startEditProject() {
