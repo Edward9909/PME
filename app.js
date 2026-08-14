@@ -293,7 +293,7 @@ function renderSessionBar() {
 function loginScreenHtml() {
     return `
     <div class="gate-screen">
-      <h2>PME — Plataforma operativa</h2>
+      <h2>AS — Plataforma operativa</h2>
       <p>Inicia sesión con tu cuenta de Google para ver tus proyectos y tareas.</p>
       <button class="google-btn" id="google-signin-btn">Continuar con Google</button>
     </div>`;
