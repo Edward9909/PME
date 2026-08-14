@@ -332,8 +332,8 @@ function createPinScreenHtml() {
       <span class="gate-badge">configura tu acceso</span>
       <h2>Crea tu NIP</h2>
       <p>Si dejas la sesión de Google abierta en una computadora compartida, cualquiera podría abrir el panel. Este NIP es una segunda verificación que se pedirá cada vez que abras la app en una pestaña o navegador nuevo. Elige de 4 a 6 dígitos.</p>
-      <input type="tel" inputmode="numeric" maxlength="6" id="pin-new-1" placeholder="Nuevo NIP" class="pin-input">
-      <input type="tel" inputmode="numeric" maxlength="6" id="pin-new-2" placeholder="Repite el NIP" class="pin-input">
+      <input type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="6" id="pin-new-1" placeholder="Nuevo NIP" class="pin-input">
+      <input type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="6" id="pin-new-2" placeholder="Repite el NIP" class="pin-input">
       <div class="pin-error" id="pin-error"></div>
       <button class="google-btn" id="pin-create-btn">Guardar NIP</button>
     </div>`;
@@ -345,7 +345,7 @@ function enterPinScreenHtml() {
       <span class="gate-badge">verificación adicional</span>
       <h2>Ingresa tu NIP</h2>
       <p>Por seguridad, el panel administrativo también pide tu NIP en cada pestaña o navegador nuevo.</p>
-      <input type="tel" inputmode="numeric" maxlength="6" id="pin-enter" placeholder="NIP" class="pin-input">
+      <input type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="6" id="pin-enter" placeholder="NIP" class="pin-input">
       <div class="pin-error" id="pin-error"></div>
       <button class="google-btn" id="pin-enter-btn">Entrar</button>
       <p style="font-size:10.5px; margin-top:14px;">¿Olvidaste tu NIP? Pídele a otro administrador que te lo restablezca desde la pestaña Usuarios, o contacta a soporte técnico.</p>
