@@ -311,11 +311,19 @@ function wirePinEnterKey(inputId, handler) {
 function renderSessionBar() {
     const holder = document.getElementById('session-bar-holder');
     const roleLabel = currentUser.role === 'admin' ? 'Administrador' : 'Colaborador';
+    const isAdminActive = currentUser.role === 'admin' && currentUser.status === 'active'
+        && currentUser.pinHash && pinVerifiedFor(currentUser.uid);
     holder.innerHTML = `
     <div class="session-bar">
+      ${isAdminActive ? `
+        <button class="link-btn" id="export-backup-btn">⭳ exportar respaldo</button>
+        <button class="link-btn" id="import-backup-trigger">⭱ restaurar respaldo</button>
+        <input type="file" id="import-backup-input" accept="application/json" style="display:none;">
+      ` : ''}
+      <span class="session-sep"></span>
       <span>${escapeHtml(currentUser.name || currentUser.email)}</span>
       <span class="tag role-tag">${roleLabel}${currentUser.area ? ' · ' + (AREA_LABEL[currentUser.area] || currentUser.area) : ''}</span>
-      <button id="signout-btn">cerrar sesión</button>
+      <button id="signout-btn">salir</button>
     </div>`;
     document.getElementById('signout-btn').addEventListener('click', signOutUser);
 }
@@ -504,11 +512,6 @@ function adminShell() {
     const notasCount = DATA.notes.filter(n => n.createdAt === todayStr() && !n.archived).length;
     const usuariosCount = DATA.users.filter(u => u.status === 'pending').length;
     return `
-    <div class="backup-bar">
-      <button id="export-backup-btn">⭳ exportar respaldo completo</button>
-      <button id="import-backup-trigger">⭱ restaurar desde respaldo</button>
-      <input type="file" id="import-backup-input" accept="application/json" style="display:none;">
-    </div>
     <div class="tabbar" id="admin-tabbar">
       <button data-tab="resumen">Resumen</button>
       <button data-tab="proyectos">Proyectos${tabBadge(proyectosCount)}</button>
@@ -528,7 +531,10 @@ function mountAdminTab() {
         b.classList.toggle('active', b.dataset.tab === adminTab);
         b.addEventListener('click', () => { adminTab = b.dataset.tab; renderAll(); });
     });
-    renderAlertBannerFor(DATA.tasks);
+    // En Resumen el banner sobra: el propio dashboard ya abre con lo vencido
+    // y lo de hoy. En las demás pestañas sigue siendo el único aviso.
+    if (adminTab === 'resumen') document.getElementById('alert-banner-holder').innerHTML = '';
+    else renderAlertBannerFor(DATA.tasks);
     const content = document.getElementById('admin-tab-content');
     if (adminTab === 'resumen') { content.innerHTML = resumenView(); return; }
     if (adminTab === 'incidencias') { content.innerHTML = incidenciasView(true); return; }
@@ -538,45 +544,263 @@ function mountAdminTab() {
     mountProyectosView();
 }
 
-function resumenView() {
-    const activeProj = DATA.projects.filter(p => p.status !== 'finalizado');
-    const overdueProj = activeProj.filter(p => p.deadline && p.deadline < todayStr());
+/* ---------- dashboard operativo: acción → tiempo → proyecto → métrica ----------
+   Nota deliberada: el modelo de datos no guarda horas (tasks.due es solo una
+   fecha) ni un historial de cambios de estado, así que este dashboard no
+   inventa horarios ni un log de actividad minuto a minuto. Todo lo que se
+   muestra abajo se deriva de datos que realmente existen. */
+function daysFromToday(iso) {
+    if (!iso) return null;
+    return Math.round((new Date(iso + 'T00:00:00') - new Date(todayStr() + 'T00:00:00')) / 86400000);
+}
+
+function relDayLabel(iso) {
+    const d = daysFromToday(iso);
+    if (d === null) return '';
+    if (d === 0) return 'hoy';
+    if (d === 1) return 'mañana';
+    if (d === -1) return 'ayer';
+    return d < 0 ? `hace ${-d} días` : `en ${d} días`;
+}
+
+function dayPart() {
+    const h = new Date().getHours();
+    return h < 12 ? 'manana' : h < 18 ? 'tarde' : 'cierre';
+}
+
+function openTasks() { return DATA.tasks.filter(t => t.col !== 2); }
+
+function urgencyRank(t) {
+    if (isOverdue(t.due, t.col)) return 0;
+    if (isDueToday(t.due, t.col)) return 1;
+    if (t.due) return 2;
+    return 3;
+}
+
+function byUrgency(a, b) {
+    return urgencyRank(a) - urgencyRank(b)
+        || (b.priority === 'urgente') - (a.priority === 'urgente')
+        || (a.due || '').localeCompare(b.due || '');
+}
+
+function nextActionTask() {
+    const pool = openTasks().filter(t => t.due);
+    return pool.length ? [...pool].sort(byUrgency)[0] : null;
+}
+
+function taskSubtitle(t) {
+    return projectName(t.projectId) + ' · ' + (t.assignee || 'sin responsable');
+}
+
+function actionRowHtml(cls, title, sub, when, onClick) {
+    return `
+    <div class="action-row ${cls}">
+      <span class="ar-title">${escapeHtml(title)}</span>
+      <span class="ar-sub">${escapeHtml(sub)}</span>
+      <span class="ar-when">${escapeHtml(when)}</span>
+      <button class="ar-open" onclick="${onClick}">abrir →</button>
+    </div>`;
+}
+
+function actionGroupHtml(cls, label, count, rows) {
+    if (!rows.length) return '';
+    return `
+    <div class="action-group ${cls}">
+      <p class="action-group-head">${label} <b>${count}</b></p>
+      ${rows.join('')}
+    </div>`;
+}
+
+// Solo lo que está atrasado o atorado. Las tareas de hoy viven en la columna
+// "Hoy" y las futuras en "Próximos días" — cada elemento aparece una sola vez
+// en el dashboard, para que esta sección siga siendo corta y escaneable.
+function requiereAccionHtml() {
+    const vencidas = openTasks().filter(t => isOverdue(t.due, t.col)).sort(byUrgency);
+    const incidencias = DATA.incidents.filter(i => i.status === 'open').sort((a, b) => a.reportedAt.localeCompare(b.reportedAt));
+    const usuarios = DATA.users.filter(u => u.status === 'pending');
+
+    const groups = [
+        actionGroupHtml('g-overdue', 'tareas vencidas', vencidas.length,
+            vencidas.map(t => actionRowHtml('r-overdue', t.title, taskSubtitle(t), relDayLabel(t.due), `openTask('${t.id}')`))),
+        actionGroupHtml('g-inc', 'incidencias abiertas', incidencias.length,
+            incidencias.map(i => actionRowHtml('r-overdue', i.title, projectName(i.projectId) + ' · reportó ' + i.reportedBy, relDayLabel(i.reportedAt), `goTab('incidencias')`))),
+        actionGroupHtml('g-users', 'usuarios por aprobar', usuarios.length,
+            usuarios.map(u => actionRowHtml('r-today', u.name || u.email, 'solicita acceso a la plataforma', 'pendiente', `goTab('usuarios')`))),
+    ].filter(Boolean);
+
+    return groups.length ? groups.join('') : '<div class="dash-empty">Nada atrasado ni pendiente de resolver. 🎉</div>';
+}
+
+function hoyColumnHtml() {
+    const part = dayPart();
+    const hint = part === 'manana' ? 'empieza por aquí' : part === 'tarde' ? 'lo que sigue pendiente' : 'lo que queda del día';
+    const hoy = openTasks().filter(t => isDueToday(t.due, t.col)).sort(byUrgency);
+    const fecha = new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+    return `
+    <div>
+      <p class="dash-label"><span>Hoy · ${fecha}</span><span class="dash-hint">${hint}</span></p>
+      ${hoy.length === 0 ? '<div class="dash-empty">Sin entregas programadas para hoy.</div>' : hoy.map(t =>
+        actionRowHtml(t.priority === 'urgente' ? 'r-today r-urgent' : 'r-today', t.title, taskSubtitle(t),
+            t.priority === 'urgente' ? 'urgente' : (AREA_LABEL[t.area] || t.area), `openTask('${t.id}')`)).join('')}
+    </div>`;
+}
+
+function proximosDiasHtml() {
+    const dias = [1, 2, 3, 4, 5, 6, 7].map(n => addDays(n));
+    const total = openTasks().filter(t => dias.includes(t.due)).length;
+    const rows = dias.map(iso => {
+        const tasks = openTasks().filter(t => t.due === iso).sort(byUrgency);
+        const d = new Date(iso + 'T00:00:00');
+        const label = d.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric' }).toUpperCase();
+        return `
+      <div class="tl-day-block">
+        <p class="tl-day-head"><span>${label}</span><span>${tasks.length || '—'}</span></p>
+        ${tasks.map(t => `
+          <div class="tl-task" onclick="openTask('${t.id}')">
+            <span class="tl-mark mark-${t.area}"></span>
+            <span class="tl-task-title">${escapeHtml(t.title)}</span>
+            <span class="tl-task-sub">${escapeHtml(projectName(t.projectId))}</span>
+          </div>`).join('')}
+      </div>`;
+    }).join('');
+    return `
+    <div>
+      <p class="dash-label"><span>Próximos 7 días</span><span class="dash-hint">${total} por entregar</span></p>
+      ${rows}
+    </div>`;
+}
+
+function proyectosActivosHtml() {
+    const activos = DATA.projects.filter(p => p.status !== 'finalizado');
+    const rows = activos.map(p => {
+        const tasks = projectTasks(p.id);
+        const done = tasks.filter(t => t.col === 2).length;
+        const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+        const vencidas = tasks.filter(t => isOverdue(t.due, t.col)).length;
+        const lateProject = p.deadline && p.deadline < todayStr() && pct < 100;
+        const meta = [
+            `${done}/${tasks.length} tareas`,
+            vencidas ? `<span class="warn-num">${vencidas} vencida${vencidas > 1 ? 's' : ''}</span>` : 'sin vencidas',
+            p.deadline ? `entrega ${fmtDate(p.deadline)}${lateProject ? ' (fuera de fecha)' : ''}` : 'sin fecha de entrega',
+        ].join(' · ');
+        return `
+      <div class="proj-row" onclick="openProject('${p.id}')">
+        <div class="proj-top">
+          <span class="proj-name">${escapeHtml(p.name)}</span>
+          <span class="proj-pct">${pct}%</span>
+        </div>
+        <div class="proj-meta">${meta}</div>
+        <div class="proj-rule"><span style="width:${pct}%"></span></div>
+      </div>`;
+    }).join('');
+    return `
+    <div>
+      <p class="dash-label"><span>Proyectos activos</span><span class="dash-hint">${activos.length}</span></p>
+      ${activos.length === 0 ? '<div class="dash-empty">Sin proyectos activos.</div>' : rows}
+    </div>`;
+}
+
+function actividadRecienteHtml() {
+    const items = [];
+    DATA.notes.filter(n => !n.archived).forEach(n => items.push({ date: n.createdAt, text: `${n.author} agregó una nota en ${projectName(n.projectId)}` }));
+    DATA.incidents.forEach(i => {
+        items.push({ date: i.reportedAt, text: `${i.reportedBy} reportó "${i.title}"` });
+        if (i.status === 'resolved' && i.resolvedAt) items.push({ date: i.resolvedAt, text: `${i.resolvedBy} resolvió "${i.title}"` });
+    });
+    DATA.projects.filter(p => p.finalizedAt).forEach(p => items.push({ date: p.finalizedAt, text: `Se finalizó el proyecto "${p.name}"` }));
+    const list = items.filter(x => x.date).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
+    return `
+    <div>
+      <p class="dash-label"><span>Actividad reciente</span></p>
+      ${list.length === 0 ? '<div class="dash-empty">Sin movimientos registrados.</div>' : list.map(x => `
+        <div class="act-row">
+          <span class="act-when">${relDayLabel(x.date)}</span>
+          <span class="act-text">${escapeHtml(x.text)}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+function operacionHtml() {
+    const activos = DATA.projects.filter(p => p.status !== 'finalizado');
+    const projVencidos = activos.filter(p => p.deadline && p.deadline < todayStr()).length;
+    const abiertas = openTasks().length;
+    const vencidas = DATA.tasks.filter(t => isOverdue(t.due, t.col)).length;
     const porHacer = DATA.tasks.filter(t => t.col === 0).length;
     const enCurso = DATA.tasks.filter(t => t.col === 1).length;
-    const hecho = DATA.tasks.filter(t => t.col === 2).length;
-    const overdueTasks = DATA.tasks.filter(t => isOverdue(t.due, t.col));
-    const openIncidents = DATA.incidents.filter(i => i.status === 'open');
-    const pendingUsers = DATA.users.filter(u => u.status === 'pending');
-    const cards = [
-        { num: activeProj.length, label: 'Proyectos activos', warn: false },
-        { num: overdueProj.length, label: 'Proyectos vencidos', warn: overdueProj.length > 0 },
-        { num: porHacer, label: 'Tareas por hacer', warn: false },
-        { num: enCurso, label: 'Tareas en curso', warn: false },
-        { num: hecho, label: 'Tareas hechas', warn: false },
-        { num: overdueTasks.length, label: 'Tareas vencidas', warn: overdueTasks.length > 0 },
-        { num: openIncidents.length, label: 'Incidencias abiertas', warn: openIncidents.length > 0 },
-        { num: pendingUsers.length, label: 'Usuarios pendientes', warn: pendingUsers.length > 0 },
-    ];
-    const attention = [
-        ...overdueTasks.map(t => ({ kind: 'Tarea vencida', title: t.title, sub: projectName(t.projectId) + ' · ' + (t.assignee || 'sin responsable') })),
-        ...openIncidents.map(i => ({ kind: 'Incidencia abierta', title: i.title, sub: projectName(i.projectId) + ' · reportó ' + i.reportedBy })),
-        ...pendingUsers.map(u => ({ kind: 'Usuario pendiente', title: u.name || u.email, sub: 'esperando aprobación en la pestaña Usuarios' })),
-    ];
+    const hechas = DATA.tasks.filter(t => t.col === 2).length;
+    const incAbiertas = DATA.incidents.filter(i => i.status === 'open').length;
+    const incTotal = DATA.incidents.length;
     return `
-    <div class="indicator-grid">
-      ${cards.map(c => `
-        <div class="indicator-card ${c.warn ? 'warn' : ''}">
-          <div class="num ${c.warn ? 'warn-num' : ''}">${c.num}</div>
-          <div class="label">${c.label}</div>
-        </div>`).join('')}
+    <p class="dash-label"><span>Operación</span></p>
+    <div class="ops-strip">
+      <div class="ops-block">
+        <div class="ops-label">Proyectos</div>
+        <div class="ops-figure">${activos.length} activos · ${projVencidos ? `<span class="warn-num">${projVencidos} fuera de fecha</span>` : '0 fuera de fecha'}</div>
+      </div>
+      <div class="ops-block">
+        <div class="ops-label">Tareas</div>
+        <div class="ops-figure">${abiertas} abiertas · ${vencidas ? `<span class="warn-num">${vencidas} vencida${vencidas > 1 ? 's' : ''}</span>` : '0 vencidas'}</div>
+        <div class="ops-detail">${porHacer} por hacer · ${enCurso} en curso · ${hechas} hechas</div>
+      </div>
+      <div class="ops-block">
+        <div class="ops-label">Incidencias</div>
+        <div class="ops-figure">${incAbiertas ? `<span class="warn-num">${incAbiertas} abiertas</span>` : '0 abiertas'}</div>
+        <div class="ops-detail">${incTotal} registradas en total</div>
+      </div>
+    </div>`;
+}
+
+function siguienteAccionHtml() {
+    const t = nextActionTask();
+    if (!t) return '';
+    const overdue = isOverdue(t.due, t.col);
+    const part = dayPart();
+    const label = part === 'cierre' ? 'para cerrar el día' : 'siguiente acción';
+    const when = overdue ? `vencida ${relDayLabel(t.due)}` : isDueToday(t.due, t.col) ? 'vence hoy' : `vence ${relDayLabel(t.due)}`;
+    return `
+    <div class="next-action ${overdue ? 'is-overdue' : ''}">
+      <span class="na-label">${label}</span>
+      <span class="na-title">${escapeHtml(t.title)}</span>
+      <span class="na-sub">${escapeHtml(taskSubtitle(t))}</span>
+      <span class="na-when">${escapeHtml(when)}</span>
+      <button onclick="openTask('${t.id}')">Abrir tarea</button>
+    </div>`;
+}
+
+function goTab(tab) { adminTab = tab; renderAll(); }
+
+function openTask(id) {
+    const t = taskById(id);
+    if (!t) return;
+    adminTab = 'proyectos';
+    viewMode = 'project';
+    activeProjectId = t.projectId;
+    activeAreaFilter = 'todas';
+    renderAll();
+}
+
+function openProject(pid) {
+    adminTab = 'proyectos';
+    viewMode = 'project';
+    activeProjectId = pid;
+    activeAreaFilter = 'todas';
+    renderAll();
+}
+
+function resumenView() {
+    return `
+    ${siguienteAccionHtml()}
+    <p class="dash-label"><span>Requiere acción</span></p>
+    ${requiereAccionHtml()}
+    <div class="dash-cols" style="margin-top:26px;">
+      ${hoyColumnHtml()}
+      ${proximosDiasHtml()}
     </div>
-    <p class="section-label"><span>Necesita tu atención</span></p>
-    ${attention.length === 0 ? '<div class="empty">Nada pendiente de atención en este momento.</div>' :
-            `<div class="today-list">${attention.map(a => `
-        <div class="today-item overdue">
-          <p class="title">${escapeHtml(a.title)}</p>
-          <div class="meta"><span class="tag overdue">${a.kind}</span><span>${escapeHtml(a.sub)}</span></div>
-        </div>`).join('')}</div>`}
+    <div class="dash-cols">
+      ${proyectosActivosHtml()}
+      ${actividadRecienteHtml()}
+    </div>
+    ${operacionHtml()}
   `;
 }
 
@@ -1364,6 +1588,7 @@ Object.assign(window, {
     startResolveIncident, confirmResolveIncident, toggleNoteForm, toggleIncidentForm, submitNote, submitIncident,
     goToday, approveUser, saveUserFields, revokeUser, reactivateUser,
     archiveNote, unarchiveNote, toggleArchivedNotes, resetUserPin,
+    goTab, openTask, openProject,
 });
 
 renderAll();
