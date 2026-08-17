@@ -779,7 +779,9 @@ function actividadRecienteHtml() {
     DATA.notes.filter(n => !n.archived).forEach(n => items.push({ date: n.createdAt, text: `${n.author} agregó una nota en ${projectName(n.projectId)}` }));
     DATA.incidents.forEach(i => {
         items.push({ date: i.reportedAt, text: `${i.reportedBy} reportó "${i.title}"` });
-        if (i.status === 'resolved' && i.resolvedAt) items.push({ date: i.resolvedAt, text: `${i.resolvedBy} resolvió "${i.title}"` });
+        if (i.resolvedAt && (i.status === 'resolved' || i.status === 'discarded')) {
+            items.push({ date: i.resolvedAt, text: `${i.resolvedBy} ${i.status === 'resolved' ? 'resolvió' : 'descartó'} "${i.title}"` });
+        }
     });
     DATA.projects.filter(p => p.finalizedAt).forEach(p => items.push({ date: p.finalizedAt, text: `Se finalizó el proyecto "${p.name}"` }));
     const list = items.filter(x => x.date).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
@@ -802,7 +804,9 @@ function operacionHtml() {
     const porHacer = DATA.tasks.filter(t => t.col === 0).length;
     const enCurso = DATA.tasks.filter(t => t.col === 1).length;
     const hechas = DATA.tasks.filter(t => t.col === 2).length;
-    const incAbiertas = DATA.incidents.filter(i => i.status === 'open').length;
+    // Mismo criterio que la insignia de Actividad y "Requiere acción": una
+    // incidencia en seguimiento sigue sin resolverse.
+    const incAbiertas = DATA.incidents.filter(i => !i.archived && (i.status === 'open' || i.status === 'tracking')).length;
     const incTotal = DATA.incidents.length;
     return `
     <p class="dash-label"><span>Operación</span></p>
@@ -818,7 +822,7 @@ function operacionHtml() {
       </div>
       <div class="ops-block">
         <div class="ops-label">Incidencias</div>
-        <div class="ops-figure">${incAbiertas ? `<span class="warn-num">${incAbiertas} abiertas</span>` : '0 abiertas'}</div>
+        <div class="ops-figure">${incAbiertas ? `<span class="warn-num">${incAbiertas} sin resolver</span>` : '0 sin resolver'}</div>
         <div class="ops-detail">${incTotal} registradas en total</div>
       </div>
     </div>`;
