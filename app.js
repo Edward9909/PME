@@ -33,7 +33,6 @@ if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
 /* ================= constantes ================= */
 const AREA_ORDER = ['produccion', 'diseno', 'gestion', 'compras', 'pedidos', 'cotizacion', 'montaje'];
 const AREA_LABEL = { produccion: 'Producción', diseno: 'Diseño', gestion: 'Gestión', compras: 'Compras', pedidos: 'Pedidos', cotizacion: 'Cotización', montaje: 'Montaje' };
-const AREA_CODE = { produccion: 'PR', diseno: 'DI', gestion: 'GE', compras: 'CO', pedidos: 'PE', cotizacion: 'CZ', montaje: 'MO' };
 const GENERAL_PROJECT = { id: 'general', name: 'Tareas generales', client: 'Sin proyecto asignado', deadline: '', status: 'activo', general: true };
 
 const addDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -46,11 +45,13 @@ let authReady = false;
 let adminTab = 'resumen'; // resumen | proyectos | incidencias | notas | usuarios
 let activeProjectId = 'general';
 let activeAreaFilter = 'todas';
-let sortMode = 'due';
+let sortMode = 'due'; // due | priority | project | assignee | created
 let showFinished = false;
 let editingTaskId = null;
 let editingProjectId = null;
-let viewMode = 'project'; // project | today | week | calendar (dentro de Proyectos)
+let viewMode = 'project'; // project | today | week — puertas temporales de Proyectos
+let taskView = 'kanban';  // kanban | lista | calendario — cómo se ven las tareas
+let taskFormOpen = false; // panel lateral de "nueva tarea"
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
 let selectedCalDay = null;
@@ -93,23 +94,47 @@ function sortedProjectList() {
 function areaOptions(selected) {
     return AREA_ORDER.map(a => `<option value="${a}" ${a === selected ? 'selected' : ''}>${AREA_LABEL[a]}</option>`).join('');
 }
+// Los nombres completos de una cuenta de Google suelen tener 3-4 palabras y
+// no caben legibles en un chip. Se muestra nombre + primer apellido, con el
+// área debajo para desambiguar entre homónimos (que aquí sí ocurren).
+function shortName(name) {
+    const parts = (name || '').trim().split(/\s+/);
+    if (parts.length <= 2) return name || '';
+    // Nombres en español: con 4 palabras suele ser nombre + segundo nombre +
+    // apellido paterno + materno, así que el apellido útil es el tercero.
+    if (parts.length >= 4) return parts[0] + ' ' + parts[2];
+    return parts[0] + ' ' + parts[1];
+}
+
 // Responsables de una tarea: uno o varios miembros registrados (con uid) y/o
 // personas externas sin cuenta (uid vacío, solo nombre libre — p.ej. un
 // servicio externo de montaje). "selected" es el arreglo t.assignees actual.
 function assigneesPickerHtml(prefix, selected) {
     const sel = selected || [];
     const selUids = new Set(sel.filter(a => a.uid).map(a => a.uid));
-    const externalNames = sel.filter(a => !a.uid).map(a => a.name).join(', ');
+    const externals = sel.filter(a => !a.uid).map(a => a.name);
     const chips = activeUsers().map(u => `
-      <label class="assignee-chip">
+      <label class="assignee-chip" title="${escapeAttr(u.name)}">
         <input type="checkbox" class="assignee-member" value="${u.uid}" data-name="${escapeAttr(u.name)}" ${selUids.has(u.uid) ? 'checked' : ''}>
-        ${escapeHtml(u.name)}
+        <span class="mc-name">${escapeHtml(shortName(u.name))}</span>
+        <span class="mc-area">${escapeHtml(AREA_LABEL[u.area] || 'sin área')}</span>
       </label>`).join('');
     return `
     <div class="assignees-picker" id="${prefix}-picker">
       <div class="assignee-check-list">${chips || '<span style="font-size:11px;color:var(--ink-soft);">Sin colaboradores activos</span>'}</div>
-      <input type="text" class="assignee-external" placeholder="Otro responsable sin cuenta — separa varios con coma" value="${escapeAttr(externalNames)}">
+      <button type="button" class="external-toggle" onclick="toggleExternalField('${prefix}')">+ agregar responsable externo</button>
+      <div class="assignee-external-wrap ${externals.length ? 'show' : ''}" id="${prefix}-external-wrap">
+        <input type="text" class="assignee-external" placeholder="Nombre de la persona o servicio" value="${escapeAttr(externals.join(', '))}">
+        <span class="assignee-external-hint">Alguien sin cuenta en la plataforma. Separa varios con coma.</span>
+      </div>
     </div>`;
+}
+
+function toggleExternalField(prefix) {
+    const wrap = document.getElementById(prefix + '-external-wrap');
+    wrap.classList.toggle('show');
+    if (wrap.classList.contains('show')) wrap.querySelector('.assignee-external').focus();
+    else wrap.querySelector('.assignee-external').value = '';
 }
 
 function readAssignees(scopeEl) {
@@ -296,6 +321,10 @@ function renderAll() {
         }
         root.innerHTML = adminShell();
         mountAdminTab();
+        if (taskFormOpen && adminTab === 'proyectos') {
+            root.insertAdjacentHTML('beforeend', taskDrawerHtml());
+            mountTaskDrawer();
+        }
     } else {
         root.innerHTML = collabShell();
         renderAlertBannerFor(myTasks());
@@ -531,9 +560,10 @@ function mountAdminTab() {
         b.classList.toggle('active', b.dataset.tab === adminTab);
         b.addEventListener('click', () => { adminTab = b.dataset.tab; renderAll(); });
     });
-    // En Resumen el banner sobra: el propio dashboard ya abre con lo vencido
-    // y lo de hoy. En las demás pestañas sigue siendo el único aviso.
-    if (adminTab === 'resumen') document.getElementById('alert-banner-holder').innerHTML = '';
+    // El banner sobra donde lo vencido y lo de hoy ya son visibles por sí
+    // solos: en Resumen (abre con eso) y en Proyectos (la puerta "Tareas de
+    // hoy"). En las demás pestañas sigue siendo el único aviso.
+    if (adminTab === 'resumen' || adminTab === 'proyectos') document.getElementById('alert-banner-holder').innerHTML = '';
     else renderAlertBannerFor(DATA.tasks);
     const content = document.getElementById('admin-tab-content');
     if (adminTab === 'resumen') { content.innerHTML = resumenView(); return; }
@@ -954,42 +984,47 @@ async function reactivateUser(uid) {
 /* ---------- pestaña Proyectos (tablero completo, editable) ---------- */
 function proyectosViewShell() {
     return `
-    <div class="view-buttons">
-      <button class="today-btn" id="today-toggle-btn"></button>
-      <button class="today-btn" id="week-toggle-btn"></button>
-      <button class="today-btn" id="cal-toggle-btn"></button>
-    </div>
+    <div id="gates-holder"></div>
     <div id="project-sub-view"></div>
   `;
 }
 
 function mountProyectosView() {
-    renderProyectosButtons();
-    document.getElementById('today-toggle-btn').addEventListener('click', () => setSubView(viewMode === 'today' ? 'project' : 'today'));
-    document.getElementById('week-toggle-btn').addEventListener('click', () => setSubView(viewMode === 'week' ? 'project' : 'week'));
-    document.getElementById('cal-toggle-btn').addEventListener('click', () => setSubView(viewMode === 'calendar' ? 'project' : 'calendar'));
+    renderGates();
     renderProjectSubView();
 }
 
 function setSubView(mode) { viewMode = mode; renderAll(); }
 
-function renderProyectosButtons() {
-    const overdueTasks = DATA.tasks.filter(t => isOverdue(t.due, t.col));
-    const todayTasks = DATA.tasks.filter(t => isDueToday(t.due, t.col));
-    const total = overdueTasks.length + todayTasks.length;
-    const btn = document.getElementById('today-toggle-btn');
-    btn.classList.toggle('in-today', viewMode === 'today');
-    btn.innerHTML = viewMode === 'today' ? '← volver a proyectos' : `Ver tareas de hoy ${total ? '<span class="count">' + total + '</span>' : ''}`;
-
+// La puerta al trabajo del día tiene peso propio (nivel de acción); semana y
+// calendario quedan por debajo, como accesos secundarios.
+function renderGates() {
+    const overdue = DATA.tasks.filter(t => isOverdue(t.due, t.col)).length;
+    const hoy = DATA.tasks.filter(t => isDueToday(t.due, t.col)).length;
+    const total = overdue + hoy;
     const weekDates = weekWindowDates();
-    const weekTasks = DATA.tasks.filter(t => t.col !== 2 && t.due && weekDates.includes(t.due));
-    const weekBtn = document.getElementById('week-toggle-btn');
-    weekBtn.classList.toggle('in-today', viewMode === 'week');
-    weekBtn.innerHTML = viewMode === 'week' ? '← volver a proyectos' : `Resumen semanal ${weekTasks.length ? '<span class="count">' + weekTasks.length + '</span>' : ''}`;
+    const weekTasks = DATA.tasks.filter(t => t.col !== 2 && t.due && weekDates.includes(t.due)).length;
 
-    const calBtn = document.getElementById('cal-toggle-btn');
-    calBtn.classList.toggle('in-today', viewMode === 'calendar');
-    calBtn.innerHTML = viewMode === 'calendar' ? '← volver a proyectos' : 'Calendario';
+    const sub = total === 0
+        ? 'nada vencido ni con entrega hoy'
+        : [hoy ? `${hoy} para hoy` : '', overdue ? `<span class="warn">${overdue} vencida${overdue > 1 ? 's' : ''}</span>` : ''].filter(Boolean).join(' · ');
+
+    document.getElementById('gates-holder').innerHTML = `
+    <button class="today-gate ${viewMode === 'today' ? 'in-today' : ''}" id="today-gate-btn">
+      ${viewMode === 'today' ? '' : `<span class="tg-num">${total}</span>`}
+      <span>
+        <span class="tg-main">${viewMode === 'today' ? '← volver a proyectos' : 'Tareas de hoy'}</span>
+        ${viewMode === 'today' ? '' : `<span class="tg-sub">${sub}</span>`}
+      </span>
+    </button>
+    <div class="secondary-gates">
+      <button id="week-gate-btn" class="${viewMode === 'week' ? 'active' : ''}">
+        ${viewMode === 'week' ? '← volver a proyectos' : `Resumen semanal${weekTasks ? `<span class="count">${weekTasks}</span>` : ''}`}
+      </button>
+    </div>`;
+
+    document.getElementById('today-gate-btn').addEventListener('click', () => setSubView(viewMode === 'today' ? 'project' : 'today'));
+    document.getElementById('week-gate-btn').addEventListener('click', () => setSubView(viewMode === 'week' ? 'project' : 'week'));
 }
 
 function weekWindowDates() {
@@ -1002,7 +1037,6 @@ function renderProjectSubView() {
     const holder = document.getElementById('project-sub-view');
     if (viewMode === 'today') { holder.innerHTML = todayViewHtml(DATA.tasks); return; }
     if (viewMode === 'week') { holder.innerHTML = weekViewHtml(DATA.tasks); return; }
-    if (viewMode === 'calendar') { holder.innerHTML = calendarShellHtml(); mountCalendar(); return; }
     holder.innerHTML = projectBoardShellHtml();
     mountProjectBoard();
 }
@@ -1066,7 +1100,9 @@ function mountCalendar() {
     renderCalendar();
 }
 
-function tasksForDate(iso) { return DATA.tasks.filter(t => t.col !== 2 && t.due === iso); }
+// El calendario es una de las tres formas de ver las MISMAS tareas, así que
+// respeta el proyecto activo y el filtro de área igual que lista y kanban.
+function tasksForDate(iso) { return visibleTasks().filter(t => t.col !== 2 && t.due === iso); }
 
 function renderCalendar() {
     const first = new Date(calYear, calMonth, 1);
@@ -1100,9 +1136,18 @@ function renderCalendar() {
 function selectCalDay(iso) { selectedCalDay = selectedCalDay === iso ? null : iso; renderAll(); }
 
 /* ---------- tablero kanban ---------- */
+/* Tres niveles explícitos:
+   1. PROYECTOS  — ¿en qué estamos trabajando?
+   2. TAREAS     — ¿qué trabajo existe dentro?
+   3. OPERACIÓN  — crear, filtrar, ordenar, mover. */
 function projectBoardShellHtml() {
     return `
-    <p class="section-label"><span>Proyectos</span><button class="open-form-btn secondary" style="margin:0;padding:4px 10px;font-size:10.5px;" onclick="toggleFinished()">${showFinished ? 'ocultar finalizados' : 'ver finalizados'}</button></p>
+    <p class="level-label">
+      <span>Proyectos</span>
+      <span class="lvl-actions">
+        <button class="btn-quiet" onclick="toggleFinished()">${showFinished ? 'ocultar finalizados' : 'ver finalizados'}</button>
+      </span>
+    </p>
     <div class="projects-strip" id="projects-strip"></div>
     <div class="new-project-form" id="new-project-form">
       <input type="text" name="name" placeholder="Nombre del proyecto">
@@ -1111,8 +1156,37 @@ function projectBoardShellHtml() {
       <button id="save-project-btn">Crear</button>
       <button class="cancel" id="cancel-project-btn" type="button">Cancelar</button>
     </div>
-    <div class="active-head"><h2 id="active-name"></h2><span class="sub" id="active-sub"></span></div>
     <div class="project-toolbar" id="project-toolbar"></div>
+
+    <p class="level-label" style="margin-top:26px;"><span>Tareas</span></p>
+    <div class="tasks-head">
+      <span class="th-context"><h2 id="active-name"></h2><span class="sub" id="active-sub"></span></span>
+      <button class="btn-primary" onclick="openTaskForm()">+ nueva tarea</button>
+    </div>
+    <div class="task-controls">
+      <div class="view-switch" id="view-switch">
+        <button data-view="lista">Lista</button>
+        <button data-view="kanban">Kanban</button>
+        <button data-view="calendario">Calendario</button>
+      </div>
+      <div class="sort-control">
+        <span>Ordenar</span>
+        <select id="sort-input">
+          <option value="due">Fecha de entrega</option>
+          <option value="priority">Prioridad</option>
+          <option value="project">Proyecto</option>
+          <option value="assignee">Responsable</option>
+          <option value="created">Fecha de creación</option>
+        </select>
+      </div>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">Área</span>
+      <div class="area-filter" id="area-filter">
+        <button data-area="todas">Todas</button>
+        ${AREA_ORDER.map(a => `<button data-area="${a}">${AREA_LABEL[a]}</button>`).join('')}
+      </div>
+    </div>
     <div id="project-body"></div>
   `;
 }
@@ -1122,6 +1196,21 @@ function toggleFinished() { showFinished = !showFinished; renderAll(); }
 function mountProjectBoard() {
     renderProjectsStrip();
     renderActiveHead();
+
+    document.querySelectorAll('#view-switch button').forEach(b => {
+        b.classList.toggle('active', b.dataset.view === taskView);
+        b.addEventListener('click', () => { taskView = b.dataset.view; renderAll(); });
+    });
+
+    const sortEl = document.getElementById('sort-input');
+    sortEl.value = sortMode;
+    sortEl.addEventListener('change', e => { sortMode = e.target.value; renderProjectBody(); });
+
+    document.querySelectorAll('#area-filter button').forEach(b => {
+        b.classList.toggle('active', b.dataset.area === activeAreaFilter);
+        b.addEventListener('click', () => { activeAreaFilter = b.dataset.area; renderAll(); });
+    });
+
     renderProjectBody();
     document.getElementById('save-project-btn').addEventListener('click', addOrUpdateProject);
     document.getElementById('cancel-project-btn').addEventListener('click', cancelProjectForm);
@@ -1134,6 +1223,13 @@ function activeProject() {
 // Un proyecto finalizado se archiva: en vez del tablero editable se muestra
 // un reporte de solo lectura (tareas, incidencias y notas de ese proyecto).
 // Para volver a editarlo hay que reabrirlo primero.
+// Las tres vistas (lista, kanban, calendario) muestran exactamente el mismo
+// conjunto de tareas — el del proyecto activo, ya filtrado por área.
+function visibleTasks() {
+    const tasks = projectTasks(activeProjectId);
+    return activeAreaFilter === 'todas' ? tasks : tasks.filter(t => t.area === activeAreaFilter);
+}
+
 function renderProjectBody() {
     const p = activeProject();
     const body = document.getElementById('project-body');
@@ -1141,36 +1237,44 @@ function renderProjectBody() {
         body.innerHTML = projectReportHtml(p);
         return;
     }
+    if (taskView === 'lista') { body.innerHTML = taskListHtml(); return; }
+    if (taskView === 'calendario') { body.innerHTML = calendarShellHtml(); mountCalendar(); return; }
     body.innerHTML = `
-    <div class="add-bar">
-      <input type="text" id="task-input" placeholder="Nueva tarea, p.ej. Cortar PTR 5x5 base sala 3">
-      <select id="area-input">${areaOptions('produccion')}</select>
-      <input type="date" id="due-input" title="Fecha de entrega de la tarea">
-      <select id="priority-input"><option value="normal">Normal</option><option value="urgente">Urgente</option></select>
-      <input type="text" id="notes-input" placeholder="Nota rápida (opcional)" style="flex:2; min-width:180px;">
-      ${assigneesPickerHtml('new-assignee', [])}
-      <button id="add-btn">Agregar</button>
-    </div>
-    <div class="toolbar-row">
-      <div class="area-filter" id="area-filter">
-        <button class="active" data-area="todas">Todas</button>
-        ${AREA_ORDER.map(a => `<button data-area="${a}">${AREA_LABEL[a]}</button>`).join('')}
-      </div>
-      <div class="sort-toggle">ordenar por
-        <select id="sort-input"><option value="due">Fecha de entrega</option><option value="created">Más reciente</option></select>
-      </div>
-    </div>
     <div class="board">
       <div class="col" data-col="0"><div class="col-head"><span class="col-num">01</span><span class="col-title">Por hacer</span><span class="col-count" id="count-0">0</span></div><div class="cards" id="cards-0"></div></div>
       <div class="col" data-col="1"><div class="col-head"><span class="col-num">02</span><span class="col-title">En curso</span><span class="col-count" id="count-1">0</span></div><div class="cards" id="cards-1"></div></div>
       <div class="col" data-col="2"><div class="col-head"><span class="col-num">03</span><span class="col-title">Hecho</span><span class="col-count" id="count-2">0</span></div><div class="cards" id="cards-2"></div></div>
     </div>
   `;
-    document.getElementById('add-btn').addEventListener('click', addTask);
-    document.getElementById('task-input').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
-    document.getElementById('sort-input').addEventListener('change', e => { sortMode = e.target.value; renderBoard(); });
-    document.querySelectorAll('#area-filter button').forEach(b => b.addEventListener('click', () => { activeAreaFilter = b.dataset.area; document.querySelectorAll('#area-filter button').forEach(x => x.classList.toggle('active', x === b)); renderBoard(); }));
     renderBoard();
+}
+
+const COL_LABEL = ['Por hacer', 'En curso', 'Hecho'];
+
+function taskListHtml() {
+    const tasks = sortTasks(visibleTasks());
+    if (!tasks.length) return '<div class="empty">Sin tareas que coincidan con este filtro.</div>';
+    return `
+    <div class="task-list-head">
+      <span>Tarea</span><span>Proyecto</span><span>Área</span><span>Responsable</span><span>Entrega</span><span></span>
+    </div>
+    ${tasks.map(t => {
+        const overdue = isOverdue(t.due, t.col);
+        const dueTxt = t.due ? (overdue ? 'vencida ' : '') + fmtDate(t.due) : '—';
+        return `
+      <div class="task-list-row ${overdue ? 'is-overdue' : ''} ${t.col === 2 ? 'is-done' : ''}">
+        <span class="tlr-title">${escapeHtml(t.title)}${t.priority === 'urgente' ? ' <span class="tag urgent">urgente</span>' : ''}</span>
+        <span class="tlr-cell">${escapeHtml(projectName(t.projectId))}</span>
+        <span class="tlr-cell"><span class="tag area-${t.area}">${escapeHtml(AREA_LABEL[t.area] || t.area)}</span></span>
+        <span class="tlr-cell">${escapeHtml(t.assignee || 'sin asignar')}</span>
+        <span class="tlr-cell ${overdue ? 'warn' : ''}">${dueTxt}</span>
+        <span class="tlr-actions">
+          <button class="btn-quiet" onclick="moveTask('${t.id}', -1)" ${t.col === 0 ? 'disabled' : ''}>&larr;</button>
+          <button class="btn-quiet" onclick="moveTask('${t.id}', 1)" ${t.col === 2 ? 'disabled' : ''}>&rarr;</button>
+          <button class="btn-quiet" onclick="startEditTask('${t.id}')">editar</button>
+        </span>
+      </div>`;
+    }).join('')}`;
 }
 
 function projectReportHtml(p) {
@@ -1226,20 +1330,34 @@ function projectReportHtml(p) {
 function renderProjectsStrip() {
     const strip = document.getElementById('projects-strip');
     const ordered = [GENERAL_PROJECT, ...sortedProjectList()];
+    // Cada tarjeta es un resumen operativo: se debe poder leer el estado del
+    // proyecto sin abrirlo.
     strip.innerHTML = ordered.map(p => {
         const tasks = projectTasks(p.id);
         const done = tasks.filter(t => t.col === 2).length;
+        const enCurso = tasks.filter(t => t.col === 1).length;
+        const porHacer = tasks.filter(t => t.col === 0).length;
+        const vencidas = tasks.filter(t => isOverdue(t.due, t.col)).length;
         const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
         const overdue = p.deadline && p.deadline < todayStr() && pct < 100 && p.status !== 'finalizado';
-        const pendingByArea = AREA_ORDER.map(a => ({ a, n: tasks.filter(t => t.area === a && t.col !== 2).length })).filter(x => x.n > 0);
         return `
       <div class="project-card ${p.id === activeProjectId ? 'active' : ''} ${p.general ? 'general' : ''} ${overdue ? 'overdue' : ''}" onclick="selectProject('${p.id}')">
         <p class="project-name">${escapeHtml(p.name)} ${p.status === 'finalizado' ? '✓' : ''}</p>
         <p class="project-client">${escapeHtml(p.client || '')}</p>
-        ${p.deadline ? `<p class="project-deadline ${overdue ? 'overdue' : ''}">entrega ${fmtDate(p.deadline)}</p>` : (p.general ? '' : '<p class="project-deadline">sin fecha</p>')}
+        <div class="project-figures">
+          <span class="pf-pct">${pct}%</span>
+          <span class="pf-total">${tasks.length} tarea${tasks.length === 1 ? '' : 's'}</span>
+        </div>
         <div class="project-bar-track"><div class="project-bar-fill" style="width:${pct}%"></div></div>
-        <div class="project-stats"><span>${tasks.length} tareas</span><span>${pct}% hecho</span></div>
-        <div class="project-areas">${pendingByArea.map(x => `<span class="area-chip tag area-${x.a}">${AREA_CODE[x.a]}·${x.n}</span>`).join('')}</div>
+        <div class="project-breakdown">
+          ${vencidas ? `<span class="warn">${vencidas} vencida${vencidas > 1 ? 's' : ''}</span>` : ''}
+          <span>${enCurso} en curso</span>
+          <span>${porHacer} por hacer</span>
+          <span>${done} hecha${done === 1 ? '' : 's'}</span>
+        </div>
+        ${p.general ? '' : `<p class="project-deadline ${overdue ? 'overdue' : ''}">
+          <span class="pd-label">Entrega</span>${p.deadline ? fmtDate(p.deadline) : 'sin fecha'}
+        </p>`}
       </div>`;
     }).join('') + '<div class="add-project-card" id="add-project-trigger">+ nuevo proyecto</div>';
     document.getElementById('add-project-trigger').addEventListener('click', () => {
@@ -1256,8 +1374,11 @@ function selectProject(pid) { activeProjectId = pid; activeAreaFilter = 'todas';
 function renderActiveHead() {
     const p = activeProject();
     if (!p) { activeProjectId = 'general'; renderAll(); return; }
+    const visibles = visibleTasks().length;
     document.getElementById('active-name').textContent = p.name;
-    document.getElementById('active-sub').textContent = [p.client, p.deadline ? 'entrega ' + fmtDate(p.deadline) : ''].filter(Boolean).join(' · ');
+    document.getElementById('active-sub').textContent = p.general
+        ? `tareas que no pertenecen a ningún proyecto · ${visibles}`
+        : [p.client, p.deadline ? 'entrega ' + fmtDate(p.deadline) : '', `${visibles} tarea${visibles === 1 ? '' : 's'}`].filter(Boolean).join(' · ');
     const toolbar = document.getElementById('project-toolbar');
     if (p.general) { toolbar.innerHTML = ''; return; }
     toolbar.innerHTML = p.status === 'finalizado' ? `
@@ -1317,23 +1438,85 @@ async function deleteProject() {
     await deleteDoc(doc(db, 'projects', pid));
 }
 
-async function addTask() {
-    const title = document.getElementById('task-input').value.trim();
-    const assignees = readAssignees(document.getElementById('new-assignee-picker'));
-    const area = document.getElementById('area-input').value;
-    const due = document.getElementById('due-input').value;
-    const priority = document.getElementById('priority-input').value;
-    const notes = document.getElementById('notes-input').value.trim();
-    if (!title) return;
+/* ---------- panel lateral: crear tarea ----------
+   El formulario deja de ocupar la pantalla de forma permanente. El proyecto
+   es un campo más, no el encabezado de la sección: así una tarea sin proyecto
+   es explícitamente independiente, no "algo dentro de Tareas generales". */
+function openTaskForm() { taskFormOpen = true; renderAll(); }
+function closeTaskForm() { taskFormOpen = false; renderAll(); }
+
+function taskDrawerHtml() {
+    return `
+    <div class="drawer-overlay" onclick="closeTaskForm()"></div>
+    <aside class="drawer" role="dialog" aria-label="Nueva tarea">
+      <div class="drawer-head">
+        <h3>Nueva tarea</h3>
+        <button onclick="closeTaskForm()" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="drawer-body">
+        <div class="drawer-field">
+          <label for="nt-title">Título</label>
+          <input type="text" id="nt-title" placeholder="p. ej. Cortar PTR 5x5 base sala 3">
+        </div>
+        <div class="drawer-field">
+          <label for="nt-project">Proyecto</label>
+          <select id="nt-project">${projectOptions(activeProjectId)}</select>
+        </div>
+        <div class="drawer-row">
+          <div class="drawer-field">
+            <label for="nt-area">Área</label>
+            <select id="nt-area">${areaOptions('produccion')}</select>
+          </div>
+          <div class="drawer-field">
+            <label for="nt-priority">Prioridad</label>
+            <select id="nt-priority"><option value="normal">Normal</option><option value="urgente">Urgente</option></select>
+          </div>
+        </div>
+        <div class="drawer-field">
+          <label>Responsables</label>
+          ${assigneesPickerHtml('nt-assignee', [])}
+        </div>
+        <div class="drawer-field">
+          <label for="nt-due">Fecha de entrega</label>
+          <input type="date" id="nt-due">
+        </div>
+        <div class="drawer-field">
+          <label for="nt-notes">Nota (opcional)</label>
+          <textarea id="nt-notes" placeholder="Contexto, medidas, material..."></textarea>
+        </div>
+        <div class="drawer-error" id="nt-error"></div>
+        <div class="drawer-actions">
+          <button class="cancel" onclick="closeTaskForm()">Cancelar</button>
+          <button class="btn-primary" id="nt-submit">Crear tarea</button>
+        </div>
+      </div>
+    </aside>`;
+}
+
+function mountTaskDrawer() {
+    const title = document.getElementById('nt-title');
+    title.focus();
+    title.addEventListener('keydown', e => { if (e.key === 'Enter') submitNewTask(); });
+    document.getElementById('nt-submit').addEventListener('click', submitNewTask);
+}
+
+async function submitNewTask() {
+    const title = document.getElementById('nt-title').value.trim();
+    const err = document.getElementById('nt-error');
+    if (!title) { err.textContent = 'La tarea necesita un título.'; return; }
+    const projectId = document.getElementById('nt-project').value;
     await addDoc(collection(db, 'tasks'), {
-        title, assignees, area, due, priority, notes,
-        projectId: activeProjectId, col: 0, createdAt: Date.now(),
+        title,
+        assignees: readAssignees(document.getElementById('nt-assignee-picker')),
+        area: document.getElementById('nt-area').value,
+        due: document.getElementById('nt-due').value,
+        priority: document.getElementById('nt-priority').value,
+        notes: document.getElementById('nt-notes').value.trim(),
+        projectId, col: 0, createdAt: Date.now(),
     });
-    document.getElementById('task-input').value = '';
-    document.getElementById('due-input').value = '';
-    document.getElementById('notes-input').value = '';
-    document.querySelectorAll('#new-assignee-picker .assignee-member').forEach(c => c.checked = false);
-    document.querySelector('#new-assignee-picker .assignee-external').value = '';
+    activeProjectId = projectId; // que la tarea recién creada quede a la vista
+    taskFormOpen = false;
+    renderAll();
 }
 
 async function moveTask(id, dir) {
@@ -1367,14 +1550,26 @@ async function saveEditTask(id) {
     await updateDoc(doc(db, 'tasks', id), patch);
 }
 
+function byDueDate(a, b) {
+    if (a.due && b.due) return a.due.localeCompare(b.due);
+    if (a.due) return -1;
+    if (b.due) return 1;
+    return (a.createdAt || 0) - (b.createdAt || 0);
+}
+
 function sortTasks(list) {
-    if (sortMode === 'due') return [...list].sort((a, b) => { if (a.due && b.due) return a.due.localeCompare(b.due); if (a.due) return -1; if (b.due) return 1; return (a.createdAt || 0) - (b.createdAt || 0); });
-    return [...list].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const arr = [...list];
+    switch (sortMode) {
+        case 'priority': return arr.sort((a, b) => (b.priority === 'urgente') - (a.priority === 'urgente') || byDueDate(a, b));
+        case 'project': return arr.sort((a, b) => projectName(a.projectId).localeCompare(projectName(b.projectId)) || byDueDate(a, b));
+        case 'assignee': return arr.sort((a, b) => (a.assignee || 'zzz').localeCompare(b.assignee || 'zzz') || byDueDate(a, b));
+        case 'created': return arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        default: return arr.sort(byDueDate);
+    }
 }
 
 function renderBoard() {
-    let tasks = projectTasks(activeProjectId);
-    if (activeAreaFilter !== 'todas') tasks = tasks.filter(t => t.area === activeAreaFilter);
+    const tasks = visibleTasks();
     [0, 1, 2].forEach(idx => {
         const container = document.getElementById('cards-' + idx);
         if (!container) return;
@@ -1589,6 +1784,7 @@ Object.assign(window, {
     goToday, approveUser, saveUserFields, revokeUser, reactivateUser,
     archiveNote, unarchiveNote, toggleArchivedNotes, resetUserPin,
     goTab, openTask, openProject,
+    openTaskForm, closeTaskForm, toggleExternalField,
 });
 
 renderAll();
