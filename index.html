@@ -887,6 +887,150 @@
         .drawer-actions .cancel { background: var(--paper); color: var(--ink-soft); border: 1px solid var(--line); padding: 9px 16px; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; }
         .drawer-error { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--oxide); min-height: 13px; }
 
+        /* ---------- ACTIVIDAD: historial operativo ---------- */
+        .activity-filters { align-items: center; gap: 16px; }
+        .mini-filter {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 9.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--steel);
+        }
+        .mini-filter select {
+            padding: 4px 7px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            text-transform: none;
+            letter-spacing: 0;
+            color: var(--ink);
+        }
+
+        .day-group { margin-bottom: 26px; }
+        .day-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: var(--steel);
+            border-bottom: 1px solid var(--line);
+            padding-bottom: 5px;
+            margin: 0 0 10px;
+        }
+
+        /* Nivel 2: el tipo de registro. La diferencia entre incidencia y nota
+           se lleva en el filo izquierdo y en un punto, no en etiquetas de
+           color grandes. */
+        .act-entry {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--steel);
+            padding: 12px 14px;
+            margin-bottom: 8px;
+        }
+        .act-entry.incidencia { border-left-color: var(--oxide); }
+        .act-entry.incidencia.st-resolved { border-left-color: var(--olive); }
+        /* Descartada no es lo mismo que resuelta: se cerró sin arreglarse,
+           así que no se le da el verde del desenlace bueno. */
+        .act-entry.incidencia.st-discarded { border-left-color: var(--steel); }
+        .act-entry.nota { border-left-color: var(--line); }
+        .act-entry.archived { opacity: 0.6; }
+
+        .act-top {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 9.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 7px;
+        }
+        .act-kind { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); }
+        .act-dot { font-size: 11px; line-height: 1; }
+        .act-entry.incidencia .act-dot { color: var(--oxide); }
+        .act-entry.incidencia.st-resolved .act-dot { color: var(--olive); }
+        .act-entry.incidencia.st-discarded .act-dot { color: var(--steel); }
+        .act-entry.nota .act-dot { color: var(--steel); }
+        .act-time { margin-left: auto; color: var(--steel); letter-spacing: 0.06em; }
+
+        .act-state { padding: 2px 7px; letter-spacing: 0.06em; }
+        .act-state.st-open { background: var(--oxide-light); color: var(--oxide); }
+        .act-state.st-tracking { background: var(--amber-light); color: var(--amber); }
+        .act-state.st-resolved { background: var(--olive-light); color: var(--olive); }
+        .act-state.st-discarded { background: var(--steel-light); color: var(--steel); }
+        .act-state.st-archived { background: var(--steel-light); color: var(--steel); }
+        .act-prio { color: var(--oxide); letter-spacing: 0.06em; }
+
+        /* Nivel 3: el contenido. Nivel 4: contexto y autoría, más ligeros. */
+        .act-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; margin: 0 0 5px; }
+        .act-context { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-soft); margin: 0 0 2px; }
+        .act-byline { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--steel); margin: 0 0 8px; }
+        .act-body { font-size: 13.5px; line-height: 1.55; margin: 0; color: var(--ink); }
+        .act-body.note-body { font-size: 14px; margin-bottom: 8px; }
+
+        /* Nivel 5: acciones secundarias, sin peso visual. */
+        .act-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 10px; }
+
+        .act-detail { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px 16px;
+            margin-bottom: 14px;
+        }
+        .dt-cell { display: flex; flex-direction: column; gap: 3px; }
+        .dt-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--steel); }
+        .dt-value { font-size: 12.5px; }
+        .dt-value .act-state { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; text-transform: uppercase; }
+
+        .detail-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+        .detail-actions-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .resolution-input {
+            width: 100%;
+            padding: 9px 10px;
+            border: 1px solid var(--line);
+            background: var(--paper);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 13px;
+            resize: vertical;
+            min-height: 56px;
+        }
+
+        /* ---------- elegir tipo de registro ---------- */
+        .chooser-question { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 4px; }
+        .type-card {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            width: 100%;
+            text-align: left;
+            padding: 14px 16px;
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--line);
+            background: var(--card);
+            cursor: pointer;
+        }
+        .type-card:hover { border-color: var(--ink); border-left-color: var(--ink); }
+        .type-card .tc-head {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .type-card .tc-dot { font-size: 12px; color: var(--steel); }
+        .type-card .tc-dot.warn { color: var(--oxide); }
+        .type-card .tc-desc { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+
         /* ---------- selección de responsables ---------- */
         .assignees-picker { display: flex; flex-direction: column; gap: 7px; }
         .assignee-check-list { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -979,21 +1123,6 @@
         .move-btns button:disabled { opacity: 0.25; cursor: default; }
         .del-btn:hover { border-color: var(--oxide); color: var(--oxide); }
         .edit-btn-sm:hover { border-color: var(--blueprint); color: var(--blueprint); }
-        .resolve-btn {
-            border: 1px solid var(--olive);
-            background: var(--olive);
-            color: var(--paper);
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 12px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            padding: 9px 16px;
-            cursor: pointer;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-        .resolve-btn:hover { background: var(--ink); border-color: var(--ink); }
         .card-actions-right { display: flex; gap: 6px; }
         .empty { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--steel); }
 
@@ -1050,31 +1179,13 @@
             margin-bottom: 10px;
         }
         .incident-card.open { border-left-color: var(--oxide); }
-        .incident-card.resolved { border-left-color: var(--olive); }
         .note-card.archived { border-left-color: var(--steel); opacity: 0.6; }
-        .incident-card .top-row { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
         .incident-card h3, .note-card h3 { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; margin: 0 0 6px; }
         .incident-card p, .note-card p { font-size: 13px; line-height: 1.5; margin: 6px 0; }
         .incident-card .meta, .note-card .meta { display: flex; gap: 6px; flex-wrap: wrap; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-soft); }
         .resolution-box { background: var(--olive-light); border-left: 2px solid var(--olive); padding: 8px 10px; margin-top: 8px; font-size: 12.5px; }
         .resolution-box .rlabel { font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; color: var(--olive); display: block; margin-bottom: 3px; }
 
-        .inline-form {
-            background: var(--card);
-            border: 1px solid var(--line);
-            padding: 14px;
-            margin-bottom: 18px;
-            display: none;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .inline-form.show { display: flex; }
-        .inline-form input, .inline-form select, .inline-form textarea { padding: 8px 10px; border: 1px solid var(--line); font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; }
-        .inline-form textarea { min-height: 60px; resize: vertical; }
-        .inline-form .row { display: flex; gap: 8px; flex-wrap: wrap; }
-        .inline-form .row-actions { display: flex; gap: 8px; justify-content: flex-end; }
-        .inline-form .row-actions button { padding: 7px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); }
-        .inline-form .row-actions button.cancel { background: var(--paper); color: var(--ink-soft); border-color: var(--line); }
 
         .open-form-btn {
             padding: 9px 16px;

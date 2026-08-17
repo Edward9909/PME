@@ -35,6 +35,15 @@ const AREA_ORDER = ['produccion', 'diseno', 'gestion', 'compras', 'pedidos', 'co
 const AREA_LABEL = { produccion: 'Producción', diseno: 'Diseño', gestion: 'Gestión', compras: 'Compras', pedidos: 'Pedidos', cotizacion: 'Cotización', montaje: 'Montaje' };
 const GENERAL_PROJECT = { id: 'general', name: 'Tareas generales', client: 'Sin proyecto asignado', deadline: '', status: 'activo', general: true };
 
+/* Ciclo de vida de una incidencia. "abierta" y "en seguimiento" son estados
+   distintos a propósito: alguien reportó algo no es lo mismo que alguien lo
+   está atendiendo. "archivada" no es un estado sino una bandera aparte
+   (igual que en notas), porque se puede archivar tanto una resuelta como una
+   descartada sin perder el desenlace real. */
+const INCIDENT_STATUS = { open: 'Abierta', tracking: 'En seguimiento', resolved: 'Resuelta', discarded: 'Descartada' };
+const INCIDENT_FLOW = ['open', 'tracking', 'resolved', 'discarded'];
+const PRIORITY_LABEL = { alta: 'Alta', normal: 'Normal', baja: 'Baja' };
+
 const addDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
@@ -42,7 +51,7 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 let currentUser = null; // { uid, email, name, photoURL, role, area, status }
 let authReady = false;
 
-let adminTab = 'resumen'; // resumen | proyectos | incidencias | notas | usuarios
+let adminTab = 'resumen'; // resumen | proyectos | actividad | equipo
 let activeProjectId = 'general';
 let activeAreaFilter = 'todas';
 let sortMode = 'due'; // due | priority | project | assignee | created
@@ -55,9 +64,16 @@ let taskFormOpen = false; // panel lateral de "nueva tarea"
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
 let selectedCalDay = null;
-let noteFormOpen = false;
-let incidentFormOpen = false;
-let showArchivedNotes = false;
+// Actividad: la memoria operativa. Incidencias y notas dejan de ser dos
+// pestañas y pasan a ser dos tipos de registro dentro del mismo historial.
+let activityType = 'todo';        // todo | incidencias | notas
+let activityProject = 'todos';
+let activityStatus = 'todos';     // solo aplica a incidencias
+let activityPeriod = '30';        // 30 | 90 | todo (días hacia atrás)
+let showArchivedActivity = false;
+let expandedActivityId = null;
+let recordDrawer = null;          // null | 'elegir' | 'incidencia' | 'nota'
+let recordDrawerProject = null;   // proyecto preseleccionado al abrir
 
 const DATA = { projects: [], tasks: [], incidents: [], notes: [], users: [] };
 let unsubscribers = [];
@@ -150,10 +166,6 @@ function readAssignees(scopeEl) {
 function projectOptions(selected) {
     return allProjects().map(p => `<option value="${p.id}" ${p.id === selected ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('');
 }
-function taskOptionsFor(pid, selected) {
-    const opts = projectTasks(pid).map(t => `<option value="${t.id}" ${t.id === selected ? 'selected' : ''}>${escapeHtml(t.title)}</option>`).join('');
-    return `<option value="">— sin tarea asociada —</option>` + opts;
-}
 
 /* ================= autenticación =================
    Se usa signInWithPopup (no signInWithRedirect): el flujo de redirección
@@ -225,6 +237,30 @@ onAuthStateChanged(auth, async (fbUser) => {
     }, err => console.error('user doc listener', err));
 });
 
+/* ================= normalización de registros =================
+   Las incidencias creadas antes del ciclo de vida ampliado solo tenían
+   open/resolved y ningún campo de área, prioridad, responsable ni hora. Se
+   completan aquí con valores neutros para que el resto del código pueda
+   asumir la forma nueva sin comprobar cada campo. */
+function normalizeIncident(id, v) {
+    return {
+        id, ...v,
+        status: INCIDENT_STATUS[v.status] ? v.status : 'open',
+        area: v.area || '',
+        priority: v.priority || 'normal',
+        archived: !!v.archived,
+        ts: v.ts || 0,
+        assigneeUid: v.assigneeUid || '',
+        assigneeName: v.assigneeName || '',
+        reportedBy: v.reportedByName || '',
+        resolvedBy: v.resolvedByName || '',
+    };
+}
+
+function normalizeNote(id, v) {
+    return { id, ...v, archived: !!v.archived, ts: v.ts || 0, author: v.authorName || '' };
+}
+
 /* ================= listeners de datos (solo si activo) ================= */
 function ensureDataListeners() {
     if (unsubscribers.length) return;
@@ -249,18 +285,12 @@ function ensureDataListeners() {
     }, err => console.error('tasks listener', err)));
 
     unsubscribers.push(onSnapshot(collection(db, 'incidents'), snap => {
-        DATA.incidents = snap.docs.map(d => {
-            const v = d.data();
-            return { id: d.id, ...v, reportedBy: v.reportedByName || '', resolvedBy: v.resolvedByName || '' };
-        });
+        DATA.incidents = snap.docs.map(d => normalizeIncident(d.id, d.data()));
         renderAll();
     }, err => console.error('incidents listener', err)));
 
     unsubscribers.push(onSnapshot(collection(db, 'notes'), snap => {
-        DATA.notes = snap.docs.map(d => {
-            const v = d.data();
-            return { id: d.id, ...v, author: v.authorName || '' };
-        });
+        DATA.notes = snap.docs.map(d => normalizeNote(d.id, d.data()));
         renderAll();
     }, err => console.error('notes listener', err)));
 
@@ -325,10 +355,18 @@ function renderAll() {
             root.insertAdjacentHTML('beforeend', taskDrawerHtml());
             mountTaskDrawer();
         }
+        if (recordDrawer) {
+            root.insertAdjacentHTML('beforeend', recordDrawerHtml());
+            mountRecordDrawer();
+        }
     } else {
         root.innerHTML = collabShell();
         renderAlertBannerFor(myTasks());
         mountCollabSections();
+        if (recordDrawer) {
+            root.insertAdjacentHTML('beforeend', recordDrawerHtml());
+            mountRecordDrawer();
+        }
     }
 }
 
@@ -537,16 +575,17 @@ function tabBadge(n) { return n > 0 ? `<span class="tab-badge">${n}</span>` : ''
 
 function adminShell() {
     const proyectosCount = DATA.tasks.filter(t => isOverdue(t.due, t.col) || isDueToday(t.due, t.col)).length;
-    const incidenciasCount = DATA.incidents.filter(i => i.status === 'open').length;
-    const notasCount = DATA.notes.filter(n => n.createdAt === todayStr() && !n.archived).length;
-    const usuariosCount = DATA.users.filter(u => u.status === 'pending').length;
+    // La insignia de Actividad cuenta lo que sigue pendiente de alguien:
+    // incidencias sin desenlace. Las notas no la alimentan (una nota no pide
+    // que nadie haga nada).
+    const actividadCount = DATA.incidents.filter(i => !i.archived && (i.status === 'open' || i.status === 'tracking')).length;
+    const equipoCount = DATA.users.filter(u => u.status === 'pending').length;
     return `
     <div class="tabbar" id="admin-tabbar">
       <button data-tab="resumen">Resumen</button>
       <button data-tab="proyectos">Proyectos${tabBadge(proyectosCount)}</button>
-      <button data-tab="incidencias">Incidencias${tabBadge(incidenciasCount)}</button>
-      <button data-tab="notas">Notas${tabBadge(notasCount)}</button>
-      <button data-tab="usuarios">Usuarios${tabBadge(usuariosCount)}</button>
+      <button data-tab="actividad">Actividad${tabBadge(actividadCount)}</button>
+      <button data-tab="equipo">Equipo${tabBadge(equipoCount)}</button>
     </div>
     <div id="admin-tab-content"></div>
   `;
@@ -567,9 +606,8 @@ function mountAdminTab() {
     else renderAlertBannerFor(DATA.tasks);
     const content = document.getElementById('admin-tab-content');
     if (adminTab === 'resumen') { content.innerHTML = resumenView(); return; }
-    if (adminTab === 'incidencias') { content.innerHTML = incidenciasView(true); return; }
-    if (adminTab === 'notas') { content.innerHTML = notasView(true); return; }
-    if (adminTab === 'usuarios') { content.innerHTML = usuariosView(); return; }
+    if (adminTab === 'actividad') { content.innerHTML = actividadView(true); mountActividadView(); return; }
+    if (adminTab === 'equipo') { content.innerHTML = usuariosView(); return; }
     content.innerHTML = proyectosViewShell();
     mountProyectosView();
 }
@@ -646,16 +684,22 @@ function actionGroupHtml(cls, label, count, rows) {
 // en el dashboard, para que esta sección siga siendo corta y escaneable.
 function requiereAccionHtml() {
     const vencidas = openTasks().filter(t => isOverdue(t.due, t.col)).sort(byUrgency);
-    const incidencias = DATA.incidents.filter(i => i.status === 'open').sort((a, b) => a.reportedAt.localeCompare(b.reportedAt));
+    // Sin resolver = abiertas + en seguimiento: ambas siguen esperando algo
+    // de alguien, aunque una ya se esté atendiendo.
+    const incidencias = DATA.incidents
+        .filter(i => !i.archived && (i.status === 'open' || i.status === 'tracking'))
+        .sort((a, b) => a.reportedAt.localeCompare(b.reportedAt));
     const usuarios = DATA.users.filter(u => u.status === 'pending');
 
     const groups = [
         actionGroupHtml('g-overdue', 'tareas vencidas', vencidas.length,
             vencidas.map(t => actionRowHtml('r-overdue', t.title, taskSubtitle(t), relDayLabel(t.due), `openTask('${t.id}')`))),
-        actionGroupHtml('g-inc', 'incidencias abiertas', incidencias.length,
-            incidencias.map(i => actionRowHtml('r-overdue', i.title, projectName(i.projectId) + ' · reportó ' + i.reportedBy, relDayLabel(i.reportedAt), `goTab('incidencias')`))),
+        actionGroupHtml('g-inc', 'incidencias sin resolver', incidencias.length,
+            incidencias.map(i => actionRowHtml('r-overdue', i.title,
+                projectName(i.projectId) + ' · ' + INCIDENT_STATUS[i.status].toLowerCase(),
+                relDayLabel(i.reportedAt), `openIncident('${i.id}')`))),
         actionGroupHtml('g-users', 'usuarios por aprobar', usuarios.length,
-            usuarios.map(u => actionRowHtml('r-today', u.name || u.email, 'solicita acceso a la plataforma', 'pendiente', `goTab('usuarios')`))),
+            usuarios.map(u => actionRowHtml('r-today', u.name || u.email, 'solicita acceso a la plataforma', 'pendiente', `goTab('equipo')`))),
     ].filter(Boolean);
 
     return groups.length ? groups.join('') : '<div class="dash-empty">Nada atrasado ni pendiente de resolver. 🎉</div>';
@@ -817,6 +861,31 @@ function openProject(pid) {
     renderAll();
 }
 
+// Abre una incidencia concreta en Actividad, ya desplegada y con los filtros
+// abiertos lo suficiente para que sea visible venga de donde venga.
+function openIncident(id) {
+    adminTab = 'actividad';
+    activityType = 'todo';
+    activityProject = 'todos';
+    activityStatus = 'todos';
+    activityPeriod = 'todo';
+    expandedActivityId = id;
+    renderAll();
+}
+
+// La actividad de un proyecto es su memoria: qué pasó, quién lo atendió y
+// qué se decidió. Se consulta en Actividad, ya filtrada, en vez de duplicar
+// el historial dentro de la vista de proyecto.
+function openProjectActivity(pid) {
+    adminTab = 'actividad';
+    activityType = 'todo';
+    activityProject = pid;
+    activityStatus = 'todos';
+    activityPeriod = 'todo';
+    expandedActivityId = null;
+    renderAll();
+}
+
 function resumenView() {
     return `
     ${siguienteAccionHtml()}
@@ -834,94 +903,241 @@ function resumenView() {
   `;
 }
 
-function incidenciasView(isAdmin) {
-    const list = [...DATA.incidents].sort((a, b) => (a.status === 'open' ? 0 : 1) - (b.status === 'open' ? 0 : 1) || b.reportedAt.localeCompare(a.reportedAt));
-    return `
-    <p class="section-label"><span>Incidencias</span></p>
-    ${list.length === 0 ? '<div class="empty">Sin incidencias registradas.</div>' : list.map(i => incidentCardHtml(i, isAdmin)).join('')}
-  `;
+/* ================= ACTIVIDAD (memoria operativa) =================
+   Incidencias y notas ya no son dos secciones sino dos tipos de registro
+   dentro del mismo historial cronológico. Lo que las distingue se conserva:
+   una incidencia es un problema con seguimiento y desenlace; una nota es
+   información que solo debe quedar registrada. */
+
+function fmtTime(ts) {
+    if (!ts) return '';
+    return new Date(ts).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 }
 
-function incidentCardHtml(i, isAdmin) {
+function dayGroupLabel(iso) {
+    if (iso === todayStr()) return 'Hoy';
+    if (iso === addDays(-1)) return 'Ayer';
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+// Un evento envuelve a la incidencia o la nota con los campos que el
+// historial necesita ordenar y agrupar, sin perder el registro original.
+function activityEvents() {
+    const inc = DATA.incidents.map(i => ({ kind: 'incidencia', id: i.id, date: i.reportedAt || '', ts: i.ts || 0, raw: i }));
+    const nts = DATA.notes.map(n => ({ kind: 'nota', id: n.id, date: n.createdAt || '', ts: n.ts || 0, raw: n }));
+    return [...inc, ...nts];
+}
+
+function filteredActivity() {
+    const cutoff = activityPeriod === 'todo' ? '' : addDays(-parseInt(activityPeriod, 10));
+    return activityEvents()
+        .filter(e => showArchivedActivity || !e.raw.archived)
+        .filter(e => activityType === 'todo' || (activityType === 'incidencias' ? e.kind === 'incidencia' : e.kind === 'nota'))
+        .filter(e => activityProject === 'todos' || e.raw.projectId === activityProject)
+        // Filtrar por estado solo tiene sentido en incidencias: al usarlo, las
+        // notas salen del resultado porque no tienen estado que comparar.
+        .filter(e => activityStatus === 'todos' || (e.kind === 'incidencia' && e.raw.status === activityStatus))
+        .filter(e => !cutoff || !e.date || e.date >= cutoff)
+        .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.ts || 0) - (a.ts || 0));
+}
+
+function actividadView(isAdmin) {
+    const events = filteredActivity();
+    const groups = [];
+    events.forEach(e => {
+        const last = groups[groups.length - 1];
+        if (last && last.date === e.date) last.items.push(e);
+        else groups.push({ date: e.date, items: [e] });
+    });
+
+    const archivadas = activityEvents().filter(e => e.raw.archived).length;
+
     return `
-    <div class="incident-card ${i.status}">
-      <div class="top-row">
-        <div>
-          <h3>${escapeHtml(i.title)}</h3>
-          <div class="meta">
-            <span class="tag project-tag">${escapeHtml(projectName(i.projectId))}</span>
-            ${i.taskId ? `<span>${escapeHtml((taskById(i.taskId) || {}).title || '')}</span>` : ''}
-            <span>reportó ${escapeHtml(i.reportedBy)} · ${fmtDate(i.reportedAt)}</span>
-            <span class="tag status-${i.status}">${i.status === 'open' ? 'abierta' : 'resuelta'}</span>
-          </div>
-          <p>${escapeHtml(i.description)}</p>
-          ${i.status === 'resolved' ? `
-            <div class="resolution-box">
-              <span class="rlabel">Resolución · ${escapeHtml(i.resolvedBy)} · ${fmtDate(i.resolvedAt)}</span>
-              ${escapeHtml(i.resolution)}
-            </div>` : ''}
-        </div>
-        ${isAdmin && i.status === 'open' ? `<button class="resolve-btn" onclick="startResolveIncident('${i.id}')">marcar resuelta</button>` : ''}
+    <p class="level-label">
+      <span>Actividad</span>
+      <span class="lvl-actions">
+        ${isAdmin ? `<button class="btn-primary" onclick="openRecordDrawer()">+ nuevo registro</button>` : ''}
+      </span>
+    </p>
+
+    <div class="task-controls">
+      <div class="view-switch" id="activity-type-switch">
+        <button data-t="todo">Todo</button>
+        <button data-t="incidencias">Incidencias</button>
+        <button data-t="notas">Notas</button>
       </div>
-      <div id="resolve-form-${i.id}"></div>
+      ${archivadas ? `<button class="btn-quiet" onclick="toggleArchivedActivity()">${showArchivedActivity ? 'ocultar archivados' : `ver archivados (${archivadas})`}</button>` : ''}
     </div>
+
+    <div class="filter-row activity-filters">
+      <label class="mini-filter">Proyecto
+        <select id="af-project">
+          <option value="todos">Todos</option>
+          ${allProjects().map(p => `<option value="${p.id}" ${activityProject === p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
+        </select>
+      </label>
+      <label class="mini-filter">Estado
+        <select id="af-status">
+          <option value="todos">Todos</option>
+          ${INCIDENT_FLOW.map(s => `<option value="${s}" ${activityStatus === s ? 'selected' : ''}>${INCIDENT_STATUS[s]}</option>`).join('')}
+        </select>
+      </label>
+      <label class="mini-filter">Periodo
+        <select id="af-period">
+          <option value="30" ${activityPeriod === '30' ? 'selected' : ''}>Últimos 30 días</option>
+          <option value="90" ${activityPeriod === '90' ? 'selected' : ''}>Últimos 90 días</option>
+          <option value="todo" ${activityPeriod === 'todo' ? 'selected' : ''}>Todo el historial</option>
+        </select>
+      </label>
+    </div>
+
+    ${groups.length === 0
+            ? '<div class="empty">Sin registros que coincidan con estos filtros.</div>'
+            : groups.map(g => `
+      <div class="day-group">
+        <p class="day-label">${escapeHtml(dayGroupLabel(g.date))}</p>
+        ${g.items.map(e => e.kind === 'incidencia' ? incidentEntryHtml(e.raw, isAdmin) : noteEntryHtml(e.raw, isAdmin)).join('')}
+      </div>`).join('')}
   `;
 }
 
-function startResolveIncident(id) {
-    const holder = document.getElementById('resolve-form-' + id);
-    holder.innerHTML = `
-    <div class="inline-form show" style="margin-top:10px;">
-      <textarea id="resolution-text-${id}" placeholder="Describe cómo se resolvió..."></textarea>
-      <div class="row-actions">
-        <button class="cancel" onclick="document.getElementById('resolve-form-${id}').innerHTML=''">Cancelar</button>
-        <button onclick="confirmResolveIncident('${id}')">Marcar como resuelta</button>
+function mountActividadView() {
+    document.querySelectorAll('#activity-type-switch button').forEach(b => {
+        b.classList.toggle('active', b.dataset.t === activityType);
+        b.addEventListener('click', () => { activityType = b.dataset.t; renderAll(); });
+    });
+    const bind = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('change', e => { fn(e.target.value); renderAll(); }); };
+    bind('af-project', v => activityProject = v);
+    bind('af-status', v => activityStatus = v);
+    bind('af-period', v => activityPeriod = v);
+}
+
+function toggleArchivedActivity() { showArchivedActivity = !showArchivedActivity; renderAll(); }
+function toggleActivityDetail(id) { expandedActivityId = expandedActivityId === id ? null : id; renderAll(); }
+
+/* ---------- una incidencia en el historial ---------- */
+function incidentEntryHtml(i, isAdmin) {
+    const open = expandedActivityId === i.id;
+    const cerrada = i.status === 'resolved' || i.status === 'discarded';
+    return `
+    <article class="act-entry incidencia st-${i.status} ${i.archived ? 'archived' : ''}">
+      <div class="act-top">
+        <span class="act-kind">
+          <span class="act-dot">${i.status === 'resolved' ? '✓' : i.status === 'discarded' ? '—' : '●'}</span>Incidencia
+        </span>
+        <span class="act-state st-${i.status}">${INCIDENT_STATUS[i.status]}</span>
+        ${i.priority === 'alta' && !cerrada ? '<span class="act-prio">Prioridad alta</span>' : ''}
+        <span class="act-time">${fmtTime(i.ts) || fmtDate(i.reportedAt)}</span>
       </div>
+      <h3 class="act-title">${escapeHtml(i.title)}</h3>
+      <p class="act-context">${escapeHtml(projectName(i.projectId))}${i.area ? ' · ' + escapeHtml(AREA_LABEL[i.area] || i.area) : ''}</p>
+      <p class="act-byline">Reportó ${escapeHtml(i.reportedBy || '—')}${i.assigneeName ? ` · Responsable ${escapeHtml(i.assigneeName)}` : ''}</p>
+      <p class="act-body">${escapeHtml(i.description)}</p>
+      ${open ? incidentDetailHtml(i, isAdmin) : ''}
+      <div class="act-actions">
+        <button class="btn-quiet" onclick="toggleActivityDetail('${i.id}')">${open ? 'cerrar' : 'ver incidencia'}</button>
+      </div>
+    </article>`;
+}
+
+function incidentDetailHtml(i, isAdmin) {
+    const cerrada = i.status === 'resolved' || i.status === 'discarded';
+    const dato = (label, value) => `<div class="dt-cell"><span class="dt-label">${label}</span><span class="dt-value">${value}</span></div>`;
+    return `
+    <div class="act-detail">
+      <div class="detail-grid">
+        ${dato('Proyecto', escapeHtml(projectName(i.projectId)))}
+        ${dato('Área', escapeHtml(i.area ? (AREA_LABEL[i.area] || i.area) : '—'))}
+        ${dato('Reportó', escapeHtml(i.reportedBy || '—') + ' · ' + fmtDate(i.reportedAt))}
+        ${dato('Responsable', escapeHtml(i.assigneeName || 'sin asignar'))}
+        ${dato('Prioridad', escapeHtml(PRIORITY_LABEL[i.priority] || 'Normal'))}
+        ${dato('Estado', `<span class="act-state st-${i.status}">${INCIDENT_STATUS[i.status]}</span>`)}
+        ${i.taskId ? dato('Tarea', escapeHtml((taskById(i.taskId) || {}).title || '—')) : ''}
+      </div>
+
+      ${cerrada ? `
+        <div class="resolution-box">
+          <span class="rlabel">${i.status === 'resolved' ? 'Resolución' : 'Descartada'} · ${escapeHtml(i.resolvedBy || '—')} · ${fmtDate(i.resolvedAt)}</span>
+          ${escapeHtml(i.resolution || 'Sin comentario.')}
+        </div>` : ''}
+
+      ${isAdmin ? `
+      <div class="detail-actions">
+        ${i.status === 'open' ? `<button class="btn-quiet" onclick="setIncidentStatus('${i.id}','tracking')">marcar en seguimiento</button>` : ''}
+        ${!cerrada ? `
+          <textarea class="resolution-input" id="res-${i.id}" placeholder="¿Cómo se resolvió? (opcional)"></textarea>
+          <div class="detail-actions-row">
+            <button class="btn-primary" onclick="closeIncident('${i.id}','resolved')">Marcar como resuelta</button>
+            <button class="btn-quiet" onclick="closeIncident('${i.id}','discarded')">descartar</button>
+          </div>` : `
+          <div class="detail-actions-row">
+            <button class="btn-quiet" onclick="setIncidentStatus('${i.id}','open')">reabrir</button>
+            <button class="btn-quiet" onclick="setIncidentArchived('${i.id}', ${!i.archived})">${i.archived ? 'desarchivar' : 'archivar'}</button>
+          </div>`}
+      </div>` : ''}
     </div>`;
 }
 
-async function confirmResolveIncident(id) {
-    const text = document.getElementById('resolution-text-' + id).value.trim();
+/* ---------- una nota en el historial (deliberadamente más ligera) ---------- */
+function noteEntryHtml(n, isAdmin) {
+    return `
+    <article class="act-entry nota ${n.archived ? 'archived' : ''}">
+      <div class="act-top">
+        <span class="act-kind"><span class="act-dot">○</span>Nota</span>
+        ${n.archived ? '<span class="act-state st-archived">Archivada</span>' : ''}
+        <span class="act-time">${fmtTime(n.ts) || fmtDate(n.createdAt)}</span>
+      </div>
+      <p class="act-body note-body">${escapeHtml(n.text)}</p>
+      <p class="act-context">${escapeHtml(projectName(n.projectId))}</p>
+      <p class="act-byline">${escapeHtml(n.author || '—')}</p>
+      ${isAdmin ? `
+      <div class="act-actions">
+        <button class="btn-quiet" onclick="setNoteArchived('${n.id}', ${!n.archived})">${n.archived ? 'desarchivar' : 'archivar'}</button>
+      </div>` : ''}
+    </article>`;
+}
+
+/* ---------- transiciones del ciclo de vida ---------- */
+async function setIncidentStatus(id, status) {
+    await updateDoc(doc(db, 'incidents', id), { status });
+}
+
+async function closeIncident(id, status) {
+    const el = document.getElementById('res-' + id);
+    const text = el ? el.value.trim() : '';
     await updateDoc(doc(db, 'incidents', id), {
-        status: 'resolved',
+        status,
         resolvedByUid: currentUser.uid,
         resolvedByName: currentUser.name,
         resolvedAt: todayStr(),
-        resolution: text || 'Resuelta sin comentario adicional.',
+        resolution: text || (status === 'resolved' ? 'Resuelta sin comentario adicional.' : 'Descartada sin comentario adicional.'),
     });
 }
 
-function notasView(isAdmin) {
-    const list = [...DATA.notes]
-        .filter(n => showArchivedNotes || !n.archived)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    return `
-    <p class="section-label">
-      <span>Notas del equipo</span>
-      ${isAdmin ? `<button class="open-form-btn secondary" style="margin:0;padding:4px 10px;font-size:10.5px;" onclick="toggleArchivedNotes()">${showArchivedNotes ? 'ocultar archivadas' : 'ver archivadas'}</button>` : ''}
-    </p>
-    ${list.length === 0 ? '<div class="empty">Sin notas todavía.</div>' : list.map(n => `
-      <div class="note-card ${n.archived ? 'archived' : ''}">
-        <div class="meta">
-          <strong>${escapeHtml(n.author)}</strong>
-          <span class="tag project-tag">${escapeHtml(projectName(n.projectId))}</span>
-          ${n.taskId ? `<span>${escapeHtml((taskById(n.taskId) || {}).title || '')}</span>` : ''}
-          <span>${fmtDate(n.createdAt)}</span>
-          ${n.archived ? '<span class="tag status-resolved">archivada</span>' : ''}
-        </div>
-        <p>${escapeHtml(n.text)}</p>
-        ${isAdmin ? `
-        <div class="card-actions" style="border-top:1px dashed var(--line); margin-top:8px; padding-top:8px; justify-content:flex-end;">
-          <button class="edit-btn-sm" onclick="${n.archived ? `unarchiveNote('${n.id}')` : `archiveNote('${n.id}')`}">${n.archived ? 'desarchivar' : 'archivar'}</button>
-        </div>` : ''}
-      </div>
-    `).join('')}
-  `;
-}
+async function setIncidentArchived(id, archived) { await updateDoc(doc(db, 'incidents', id), { archived }); }
+async function setNoteArchived(id, archived) { await updateDoc(doc(db, 'notes', id), { archived }); }
 
-async function archiveNote(id) { await updateDoc(doc(db, 'notes', id), { archived: true }); }
-async function unarchiveNote(id) { await updateDoc(doc(db, 'notes', id), { archived: false }); }
-function toggleArchivedNotes() { showArchivedNotes = !showArchivedNotes; renderAll(); }
+/* ---------- tarjeta de solo lectura (reporte de proyecto finalizado) ---------- */
+function incidentCardHtml(i) {
+    const cerrada = i.status === 'resolved' || i.status === 'discarded';
+    return `
+    <div class="incident-card ${i.status}">
+      <h3>${escapeHtml(i.title)}</h3>
+      <div class="meta">
+        <span class="tag project-tag">${escapeHtml(projectName(i.projectId))}</span>
+        ${i.area ? `<span class="tag area-${i.area}">${escapeHtml(AREA_LABEL[i.area] || i.area)}</span>` : ''}
+        <span>reportó ${escapeHtml(i.reportedBy)} · ${fmtDate(i.reportedAt)}</span>
+        <span class="act-state st-${i.status}">${INCIDENT_STATUS[i.status]}</span>
+      </div>
+      <p>${escapeHtml(i.description)}</p>
+      ${cerrada ? `
+        <div class="resolution-box">
+          <span class="rlabel">${i.status === 'resolved' ? 'Resolución' : 'Descartada'} · ${escapeHtml(i.resolvedBy || '—')} · ${fmtDate(i.resolvedAt)}</span>
+          ${escapeHtml(i.resolution || 'Sin comentario.')}
+        </div>` : ''}
+    </div>`;
+}
 
 /* ---------- pestaña Usuarios ---------- */
 function usuariosView() {
@@ -1314,7 +1530,7 @@ function projectReportHtml(p) {
       </div>`).join('')}</div>`}
 
     <p class="section-label" style="margin-top:22px;"><span>Incidencias</span></p>
-    ${incidents.length === 0 ? '<div class="empty">Sin incidencias registradas.</div>' : incidents.map(i => incidentCardHtml(i, false)).join('')}
+    ${incidents.length === 0 ? '<div class="empty">Sin incidencias registradas.</div>' : incidents.map(i => incidentCardHtml(i)).join('')}
 
     <p class="section-label" style="margin-top:22px;"><span>Notas</span></p>
     ${notes.length === 0 ? '<div class="empty">Sin notas registradas.</div>' : notes.map(n => `
@@ -1381,12 +1597,16 @@ function renderActiveHead() {
         : [p.client, p.deadline ? 'entrega ' + fmtDate(p.deadline) : '', `${visibles} tarea${visibles === 1 ? '' : 's'}`].filter(Boolean).join(' · ');
     const toolbar = document.getElementById('project-toolbar');
     if (p.general) { toolbar.innerHTML = ''; return; }
+    const registros = activityEvents().filter(e => e.raw.projectId === p.id && !e.raw.archived).length;
+    const verActividad = `<button class="edit-btn" onclick="openProjectActivity('${p.id}')">actividad${registros ? ` (${registros})` : ''}</button>`;
     toolbar.innerHTML = p.status === 'finalizado' ? `
     <button class="finalize" onclick="reopenProject()">↺ reabrir proyecto</button>
+    ${verActividad}
     <button class="edit-btn" onclick="startEditProject()">editar</button>
     <button class="danger" onclick="deleteProject()">eliminar proyecto</button>
   ` : `
     <button class="finalize" onclick="finalizeProject()">✓ finalizar proyecto</button>
+    ${verActividad}
     <button class="edit-btn" onclick="startEditProject()">editar</button>
     <button class="danger" onclick="deleteProject()">eliminar proyecto</button>
   `;
@@ -1498,6 +1718,158 @@ function mountTaskDrawer() {
     title.focus();
     title.addEventListener('keydown', e => { if (e.key === 'Enter') submitNewTask(); });
     document.getElementById('nt-submit').addEventListener('click', submitNewTask);
+}
+
+/* ---------- panel lateral: nuevo registro (incidencia o nota) ----------
+   Una sola acción de entrada. El usuario elige el tipo después de decidir
+   que quiere registrar algo, en vez de tener que entender de antemano la
+   diferencia entre las dos secciones. */
+function openRecordDrawer(projectId) {
+    recordDrawer = 'elegir';
+    recordDrawerProject = projectId || null;
+    renderAll();
+}
+function closeRecordDrawer() { recordDrawer = null; recordDrawerProject = null; renderAll(); }
+function chooseRecordType(kind) { recordDrawer = kind; renderAll(); }
+
+function recordDrawerHtml() {
+    const body = recordDrawer === 'elegir' ? recordChooserHtml()
+        : recordDrawer === 'incidencia' ? incidentFormHtml()
+            : noteFormHtml();
+    const title = recordDrawer === 'elegir' ? 'Nuevo registro'
+        : recordDrawer === 'incidencia' ? 'Nueva incidencia' : 'Nueva nota';
+    return `
+    <div class="drawer-overlay" onclick="closeRecordDrawer()"></div>
+    <aside class="drawer" role="dialog" aria-label="${title}">
+      <div class="drawer-head">
+        <h3>${title}</h3>
+        <button onclick="closeRecordDrawer()" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="drawer-body">${body}</div>
+    </aside>`;
+}
+
+function recordChooserHtml() {
+    return `
+    <p class="chooser-question">¿Qué quieres registrar?</p>
+    <button class="type-card" onclick="chooseRecordType('incidencia')">
+      <span class="tc-head"><span class="tc-dot warn">●</span>Incidencia</span>
+      <span class="tc-desc">Un problema que requiere seguimiento hasta resolverse.</span>
+    </button>
+    <button class="type-card" onclick="chooseRecordType('nota')">
+      <span class="tc-head"><span class="tc-dot">○</span>Nota</span>
+      <span class="tc-desc">Información que debe quedar registrada, sin seguimiento.</span>
+    </button>`;
+}
+
+function incidentFormHtml() {
+    const pre = recordDrawerProject || activeProjectId;
+    return `
+    <div class="drawer-field">
+      <label for="ni-title">Título</label>
+      <input type="text" id="ni-title" placeholder="p. ej. Se acabó el PTR">
+    </div>
+    <div class="drawer-field">
+      <label for="ni-desc">Descripción</label>
+      <textarea id="ni-desc" placeholder="Qué pasó y qué está bloqueando."></textarea>
+    </div>
+    <div class="drawer-field">
+      <label for="ni-project">Proyecto</label>
+      <select id="ni-project">${projectOptions(pre)}</select>
+    </div>
+    <div class="drawer-row">
+      <div class="drawer-field">
+        <label for="ni-area">Área</label>
+        <select id="ni-area">${areaOptions(currentUser.area || 'produccion')}</select>
+      </div>
+      <div class="drawer-field">
+        <label for="ni-priority">Prioridad</label>
+        <select id="ni-priority">
+          <option value="alta">Alta</option>
+          <option value="normal" selected>Normal</option>
+          <option value="baja">Baja</option>
+        </select>
+      </div>
+    </div>
+    <div class="drawer-field">
+      <label for="ni-assignee">Responsable</label>
+      <select id="ni-assignee">
+        <option value="">— por asignar —</option>
+        ${activeUsers().map(u => `<option value="${u.uid}">${escapeHtml(shortName(u.name))} — ${AREA_LABEL[u.area] || 'sin área'}</option>`).join('')}
+      </select>
+    </div>
+    <div class="drawer-error" id="ni-error"></div>
+    <div class="drawer-actions">
+      <button class="cancel" onclick="closeRecordDrawer()">Cancelar</button>
+      <button class="btn-primary" onclick="submitIncident()">Reportar incidencia</button>
+    </div>`;
+}
+
+function noteFormHtml() {
+    const pre = recordDrawerProject || activeProjectId;
+    return `
+    <div class="drawer-field">
+      <label for="nn-project">Proyecto</label>
+      <select id="nn-project">${projectOptions(pre)}</select>
+    </div>
+    <div class="drawer-field">
+      <label for="nn-text">Nota</label>
+      <textarea id="nn-text" rows="6" placeholder="Avance, observación, decisión, contexto..." style="min-height:120px;"></textarea>
+    </div>
+    <div class="drawer-error" id="nn-error"></div>
+    <div class="drawer-actions">
+      <button class="cancel" onclick="closeRecordDrawer()">Cancelar</button>
+      <button class="btn-primary" onclick="submitNote()">Guardar nota</button>
+    </div>`;
+}
+
+function mountRecordDrawer() {
+    const first = document.getElementById('ni-title') || document.getElementById('nn-text');
+    if (first) first.focus();
+}
+
+async function submitIncident() {
+    const title = document.getElementById('ni-title').value.trim();
+    const description = document.getElementById('ni-desc').value.trim();
+    const err = document.getElementById('ni-error');
+    if (!title) { err.textContent = 'La incidencia necesita un título.'; return; }
+    if (!description) { err.textContent = 'Describe brevemente qué ocurrió.'; return; }
+    const assigneeUid = document.getElementById('ni-assignee').value;
+    const assignee = assigneeUid ? activeUsers().find(u => u.uid === assigneeUid) : null;
+    await addDoc(collection(db, 'incidents'), {
+        title, description,
+        projectId: document.getElementById('ni-project').value,
+        area: document.getElementById('ni-area').value,
+        priority: document.getElementById('ni-priority').value,
+        assigneeUid: assigneeUid || '',
+        assigneeName: assignee ? assignee.name : '',
+        taskId: '',
+        reportedByUid: currentUser.uid,
+        reportedByName: currentUser.name,
+        reportedAt: todayStr(),
+        ts: Date.now(),
+        status: 'open',
+        archived: false,
+        resolvedByUid: '', resolvedByName: '', resolvedAt: '', resolution: '',
+    });
+    closeRecordDrawer();
+}
+
+async function submitNote() {
+    const text = document.getElementById('nn-text').value.trim();
+    const err = document.getElementById('nn-error');
+    if (!text) { err.textContent = 'La nota está vacía.'; return; }
+    await addDoc(collection(db, 'notes'), {
+        text,
+        authorUid: currentUser.uid,
+        authorName: currentUser.name,
+        projectId: document.getElementById('nn-project').value,
+        taskId: '',
+        createdAt: todayStr(),
+        ts: Date.now(),
+        archived: false,
+    });
+    closeRecordDrawer();
 }
 
 async function submitNewTask() {
@@ -1635,8 +2007,12 @@ function mountCollabSections() {
     const tasks = myTasks();
     const myProjectIds = [...new Set(tasks.map(t => t.projectId))];
     const myProjects = myProjectIds.map(id => projectById(id)).filter(Boolean);
-    const myNotes = DATA.notes.filter(n => n.authorUid === currentUser.uid).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    const myIncidents = DATA.incidents.filter(i => i.reportedByUid === currentUser.uid).sort((a, b) => b.reportedAt.localeCompare(a.reportedAt));
+    // El colaborador ve su propio historial con la misma estructura que la
+    // Actividad del administrador, solo que acotado a lo que él registró.
+    const misRegistros = activityEvents()
+        .filter(e => e.kind === 'incidencia' ? e.raw.reportedByUid === currentUser.uid : e.raw.authorUid === currentUser.uid)
+        .filter(e => !e.raw.archived)
+        .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.ts || 0) - (a.ts || 0));
 
     holder.innerHTML = `
     <div class="collab-section">
@@ -1680,85 +2056,15 @@ function mountCollabSections() {
     </div>
 
     <div class="collab-section">
-      <p class="section-label"><span>Notas</span></p>
-      <button class="open-form-btn" onclick="toggleNoteForm()">${noteFormOpen ? 'cancelar' : '+ nueva nota'}</button>
-      <div class="inline-form ${noteFormOpen ? 'show' : ''}" id="note-form">
-        <textarea id="note-text" placeholder="Escribe una nota: avance, observación, información de materiales, contexto..."></textarea>
-        <div class="row">
-          <select id="note-project">${projectOptions(myProjectIds[0] || '')}</select>
-          <select id="note-task"></select>
-        </div>
-        <div class="row-actions"><button class="cancel" onclick="toggleNoteForm()">Cancelar</button><button onclick="submitNote()">Guardar nota</button></div>
-      </div>
-      ${myNotes.length === 0 ? '<div class="empty">Todavía no has creado notas.</div>' : myNotes.map(n => `
-        <div class="note-card">
-          <div class="meta"><span class="tag project-tag">${escapeHtml(projectName(n.projectId))}</span><span>${fmtDate(n.createdAt)}</span></div>
-          <p>${escapeHtml(n.text)}</p>
-        </div>`).join('')}
-    </div>
-
-    <div class="collab-section">
-      <p class="section-label"><span>Incidencias</span></p>
-      <button class="open-form-btn" onclick="toggleIncidentForm()">${incidentFormOpen ? 'cancelar' : '+ reportar incidencia'}</button>
-      <div class="inline-form ${incidentFormOpen ? 'show' : ''}" id="incident-form">
-        <input type="text" id="incident-title" placeholder="Título breve de la incidencia">
-        <textarea id="incident-desc" placeholder="Describe el problema..."></textarea>
-        <div class="row">
-          <select id="incident-project">${projectOptions(myProjectIds[0] || '')}</select>
-          <select id="incident-task"></select>
-        </div>
-        <div class="row-actions"><button class="cancel" onclick="toggleIncidentForm()">Cancelar</button><button onclick="submitIncident()">Reportar incidencia</button></div>
-      </div>
-      ${myIncidents.length === 0 ? '<div class="empty">No has reportado incidencias.</div>' : myIncidents.map(i => incidentCardHtml(i, false)).join('')}
+      <p class="section-label">
+        <span>Lo que he registrado</span>
+        <button class="btn-primary" onclick="openRecordDrawer()">+ nuevo registro</button>
+      </p>
+      ${misRegistros.length === 0
+            ? '<div class="empty">Todavía no has registrado nada. Usa «nuevo registro» para reportar un problema o dejar una nota.</div>'
+            : misRegistros.map(e => e.kind === 'incidencia' ? incidentEntryHtml(e.raw, false) : noteEntryHtml(e.raw, false)).join('')}
     </div>
   `;
-
-    const noteProjectSel = document.getElementById('note-project');
-    const noteTaskSel = document.getElementById('note-task');
-    const refreshNoteTasks = () => { noteTaskSel.innerHTML = taskOptionsFor(noteProjectSel.value, ''); };
-    if (noteProjectSel) { noteProjectSel.addEventListener('change', refreshNoteTasks); refreshNoteTasks(); }
-
-    const incProjectSel = document.getElementById('incident-project');
-    const incTaskSel = document.getElementById('incident-task');
-    const refreshIncTasks = () => { incTaskSel.innerHTML = taskOptionsFor(incProjectSel.value, ''); };
-    if (incProjectSel) { incProjectSel.addEventListener('change', refreshIncTasks); refreshIncTasks(); }
-}
-
-function toggleNoteForm() { noteFormOpen = !noteFormOpen; renderAll(); }
-function toggleIncidentForm() { incidentFormOpen = !incidentFormOpen; renderAll(); }
-
-async function submitNote() {
-    const text = document.getElementById('note-text').value.trim();
-    if (!text) return;
-    await addDoc(collection(db, 'notes'), {
-        text,
-        authorUid: currentUser.uid,
-        authorName: currentUser.name,
-        projectId: document.getElementById('note-project').value,
-        taskId: document.getElementById('note-task').value,
-        createdAt: todayStr(),
-        archived: false,
-    });
-    noteFormOpen = false;
-    renderAll();
-}
-
-async function submitIncident() {
-    const title = document.getElementById('incident-title').value.trim();
-    const description = document.getElementById('incident-desc').value.trim();
-    if (!title || !description) return;
-    await addDoc(collection(db, 'incidents'), {
-        title, description,
-        projectId: document.getElementById('incident-project').value,
-        taskId: document.getElementById('incident-task').value,
-        reportedByUid: currentUser.uid,
-        reportedByName: currentUser.name,
-        reportedAt: todayStr(),
-        status: 'open',
-        resolvedByUid: '', resolvedByName: '', resolvedAt: '', resolution: '',
-    });
-    incidentFormOpen = false;
-    renderAll();
 }
 
 /* ================= banner de alertas (compartido) ================= */
@@ -1780,9 +2086,13 @@ function goToday() { adminTab = 'proyectos'; viewMode = 'today'; renderAll(); }
 Object.assign(window, {
     selectProject, toggleFinished, startEditProject, finalizeProject, reopenProject, deleteProject,
     moveTask, deleteTask, startEditTask, cancelEditTask, saveEditTask, markDone, selectCalDay,
-    startResolveIncident, confirmResolveIncident, toggleNoteForm, toggleIncidentForm, submitNote, submitIncident,
+    submitNote, submitIncident,
+    openRecordDrawer, closeRecordDrawer, chooseRecordType,
+    toggleActivityDetail, toggleArchivedActivity,
+    setIncidentStatus, closeIncident, setIncidentArchived, setNoteArchived,
+    openIncident, openProjectActivity,
     goToday, approveUser, saveUserFields, revokeUser, reactivateUser,
-    archiveNote, unarchiveNote, toggleArchivedNotes, resetUserPin,
+    resetUserPin,
     goTab, openTask, openProject,
     openTaskForm, closeTaskForm, toggleExternalField,
 });
