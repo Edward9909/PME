@@ -6,32 +6,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AS — Plataforma operativa</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
         rel="stylesheet">
     <style>
         :root {
-            --paper: #F1EDE3;
-            --ink: #2B2B28;
-            --ink-soft: #5C5A52;
-            --blueprint: #2C5F74;
-            --blueprint-light: #E4EEF0;
-            --oxide: #B5502D;
-            --oxide-light: #F7E6DE;
-            --olive: #5C6B3E;
-            --olive-light: #E8ECDC;
-            --plum: #6B4A6B;
-            --plum-light: #EFE3EC;
-            --amber: #9C7A1F;
-            --amber-light: #F5EAD3;
-            --teal: #1F7A6C;
-            --teal-light: #DCEFEB;
-            --indigo: #4C4A8C;
-            --indigo-light: #E4E3F2;
-            --steel: #6E6B62;
-            --steel-light: #EAE8E1;
-            --line: #D8D3C4;
+            /* Neutros: la base del lenguaje. Gris frío, no papel cálido. */
+            --paper: #EFEFED;
+            --surface: #F6F6F4;
             --card: #FFFFFF;
+            --ink: #1A1A19;
+            --ink-soft: #6B6B67;
+            --steel: #9B9B96;
+            --steel-light: #ECECE9;
+            --line: #E4E4E0;
+            --line-soft: #EDEDEA;
+
+            /* Colores con significado. Se conservan porque comunican estado,
+               no decoran: naranja = problema, verde = resuelto, ámbar =
+               en espera. Bajados de saturación para convivir con el neutro. */
+            --oxide: #B0512F;
+            --oxide-light: #F6E9E3;
+            --olive: #5A6E4E;
+            --olive-light: #EAEFE6;
+            --amber: #93761F;
+            --amber-light: #F4EEDD;
+
+            /* Áreas: identifican tipo de trabajo de un vistazo. Muy
+               desaturadas para no competir con el gris. */
+            --blueprint: #3F6272;
+            --blueprint-light: #E9EFF2;
+            --plum: #6A5069;
+            --plum-light: #F0EAF0;
+            --teal: #3A6E64;
+            --teal-light: #E6F0EE;
+            --indigo: #52508A;
+            --indigo-light: #EAEAF3;
+
+            /* Radios */
+            --r-xs: 6px;
+            --r-sm: 9px;
+            --r-md: 12px;
+            --r-lg: 16px;
+            --r-xl: 22px;
+            --r-pill: 999px;
+
+            /* Sombras: difusas, baja opacidad, poca distancia. */
+            --sh-1: 0 1px 2px rgba(20, 20, 19, 0.04);
+            --sh-2: 0 1px 3px rgba(20, 20, 19, 0.05), 0 4px 12px rgba(20, 20, 19, 0.035);
+            --sh-3: 0 2px 6px rgba(20, 20, 19, 0.06), 0 12px 32px rgba(20, 20, 19, 0.07);
+            --ring: 0 0 0 3px rgba(26, 26, 25, 0.09);
         }
 
         * { box-sizing: border-box; }
@@ -40,7 +65,7 @@
             margin: 0;
             background: var(--paper);
             color: var(--ink);
-            font-family: 'IBM Plex Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
             padding: 20px 16px 60px;
         }
 
@@ -56,14 +81,14 @@
         }
 
         .head h1 {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-weight: 600;
             font-size: 19px;
             margin: 0;
         }
 
         .head .meta {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 11px;
             color: var(--ink-soft);
             text-transform: uppercase;
@@ -78,7 +103,7 @@
             flex-wrap: wrap;
             justify-content: flex-end;
             margin-bottom: 10px;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 11.5px;
             color: var(--ink-soft);
         }
@@ -89,7 +114,7 @@
             border: none;
             background: none;
             color: var(--blueprint);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10.5px;
             padding: 0;
             cursor: pointer;
@@ -108,7 +133,7 @@
             border: 1px solid var(--line);
             background: var(--card);
             color: var(--ink-soft);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 11px;
             padding: 5px 10px;
             cursor: pointer;
@@ -128,7 +153,7 @@
         }
 
         .gate-screen h2 {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-weight: 600;
             font-size: 18px;
             margin: 0 0 10px;
@@ -149,7 +174,7 @@
             border: 1px solid var(--ink);
             background: var(--ink);
             color: var(--paper);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 12.5px;
             text-transform: uppercase;
             cursor: pointer;
@@ -164,7 +189,7 @@
             margin: 0 auto 10px;
             padding: 12px;
             text-align: center;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 20px;
             letter-spacing: 0.35em;
             border: 1px solid var(--line);
@@ -174,7 +199,7 @@
 
         .pin-error {
             color: var(--oxide);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10.5px;
             min-height: 14px;
             margin-bottom: 8px;
@@ -182,7 +207,7 @@
 
         .gate-badge {
             display: inline-block;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.06em;
@@ -213,12 +238,12 @@
 
         .user-row .who { flex: 1; min-width: 160px; }
         .user-row .who .name { font-size: 13.5px; margin: 0; }
-        .user-row .who .email { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-soft); }
+        .user-row .who .email { font-family: 'Inter', sans-serif; font-size: 10.5px; color: var(--ink-soft); }
 
         .user-row select {
             padding: 6px 8px;
             border: 1px solid var(--line);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 11px;
         }
 
@@ -226,7 +251,7 @@
             border: 1px solid var(--olive);
             color: var(--olive);
             background: none;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 11px;
             padding: 6px 10px;
             cursor: pointer;
@@ -246,7 +271,7 @@
             color: var(--oxide);
             padding: 10px 14px;
             margin-bottom: 18px;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 12px;
         }
 
@@ -262,7 +287,7 @@
             color: var(--blueprint);
             padding: 10px 14px;
             margin-bottom: 18px;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 0.03em;
@@ -279,7 +304,7 @@
         }
 
         .tabbar button {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-weight: 600;
             font-size: 13px;
             text-transform: uppercase;
@@ -309,7 +334,7 @@
             border-radius: 999px;
             background: var(--oxide);
             color: #fff;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10px;
             font-weight: 500;
             letter-spacing: 0;
@@ -318,7 +343,7 @@
         }
 
         .section-label {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.08em;
@@ -346,7 +371,7 @@
 
         .indicator-card.warn { border-top-color: var(--oxide); }
         .indicator-card .num {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-weight: 600;
             font-size: 26px;
             line-height: 1;
@@ -356,7 +381,7 @@
         .indicator-card .num.warn-num { color: var(--oxide); }
 
         .indicator-card .label {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10.5px;
             color: var(--ink-soft);
             text-transform: uppercase;
@@ -365,7 +390,7 @@
 
         /* ---------- dashboard operativo ---------- */
         .dash-label {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10.5px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
@@ -395,19 +420,19 @@
 
         .next-action.is-overdue { border-left-color: var(--oxide); }
         .next-action .na-label {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.12em;
             color: var(--ink-soft);
             flex: 1 1 100%;
         }
-        .next-action .na-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 17px; }
-        .next-action .na-sub { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-soft); }
-        .next-action .na-when { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--oxide); }
+        .next-action .na-title { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 17px; }
+        .next-action .na-sub { font-family: 'Inter', sans-serif; font-size: 11px; color: var(--ink-soft); }
+        .next-action .na-when { font-family: 'Inter', sans-serif; font-size: 11px; color: var(--oxide); }
         .next-action button {
             margin-left: auto;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.06em;
@@ -421,7 +446,7 @@
 
         .action-group { margin-bottom: 14px; }
         .action-group-head {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
@@ -447,14 +472,14 @@
         .action-row .ar-title { font-size: 13.5px; }
         .action-row .ar-sub {
             grid-column: 1 / 2;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10.5px;
             color: var(--ink-soft);
         }
         .action-row .ar-when {
             grid-row: 1 / 3;
             grid-column: 2 / 3;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10.5px;
             color: var(--ink-soft);
             white-space: nowrap;
@@ -464,7 +489,7 @@
         .action-row .ar-open {
             grid-row: 1 / 3;
             grid-column: 3 / 4;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10.5px;
             padding: 5px 10px;
             border: 1px solid var(--line);
@@ -494,24 +519,24 @@
         .ops-block { padding: 11px 14px; border-right: 1px solid var(--line); }
         .ops-block:last-child { border-right: none; }
         .ops-label {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 9.5px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
             color: var(--ink-soft);
             margin-bottom: 4px;
         }
-        .ops-figure { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; }
+        .ops-figure { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 15px; }
         .ops-figure .warn-num { color: var(--oxide); }
-        .ops-detail { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--steel); margin-top: 3px; }
+        .ops-detail { font-family: 'Inter', sans-serif; font-size: 10px; color: var(--steel); margin-top: 3px; }
 
         /* proyectos: composición editorial, sin barra genérica */
         .proj-row { padding: 9px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
         .proj-row:hover .proj-name { color: var(--blueprint); }
         .proj-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-        .proj-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13.5px; }
-        .proj-pct { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; }
-        .proj-meta { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--ink-soft); margin-top: 3px; }
+        .proj-name { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 13.5px; }
+        .proj-pct { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 15px; }
+        .proj-meta { font-family: 'Inter', sans-serif; font-size: 10px; color: var(--ink-soft); margin-top: 3px; }
         .proj-meta .warn-num { color: var(--oxide); }
         .proj-rule { height: 2px; background: var(--line); margin-top: 7px; }
         .proj-rule span { display: block; height: 100%; background: var(--ink); }
@@ -521,7 +546,7 @@
         .tl-day-head {
             display: flex;
             justify-content: space-between;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.08em;
@@ -538,7 +563,7 @@
         }
         .tl-task:hover .tl-task-title { color: var(--blueprint); }
         .tl-task-title { font-size: 12.5px; }
-        .tl-task-sub { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--steel); }
+        .tl-task-sub { font-family: 'Inter', sans-serif; font-size: 10px; color: var(--steel); }
         .tl-mark { width: 9px; height: 9px; background: var(--steel); align-self: center; }
         .mark-produccion { background: var(--oxide); }
         .mark-diseno { background: var(--blueprint); }
@@ -554,14 +579,14 @@
             gap: 10px;
             padding: 5px 0;
             border-bottom: 1px dashed var(--line);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10.5px;
         }
         .act-when { color: var(--steel); text-transform: uppercase; letter-spacing: 0.04em; }
         .act-text { color: var(--ink-soft); }
 
         .dash-empty {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 11px;
             color: var(--steel);
             padding: 10px 0;
@@ -597,7 +622,7 @@
         .project-card.readonly { cursor: default; }
 
         .project-name {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-weight: 600;
             font-size: 13.5px;
             margin: 0 0 4px;
@@ -606,21 +631,21 @@
         .project-client { font-size: 11.5px; color: var(--ink-soft); margin: 0 0 10px; }
 
         .project-figures { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-        .project-figures .pf-pct { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 22px; line-height: 1; }
-        .project-figures .pf-total { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--ink-soft); }
+        .project-figures .pf-pct { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 22px; line-height: 1; }
+        .project-figures .pf-total { font-family: 'Inter', sans-serif; font-size: 10px; color: var(--ink-soft); }
 
         .project-bar-track { height: 4px; background: var(--line); margin-bottom: 8px; }
         .project-bar-fill { height: 100%; background: var(--olive); }
 
         /* usada por el tablero del colaborador, que es de solo lectura */
-        .project-stats { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--ink-soft); display: flex; justify-content: space-between; margin-bottom: 6px; }
+        .project-stats { font-family: 'Inter', sans-serif; font-size: 10px; color: var(--ink-soft); display: flex; justify-content: space-between; margin-bottom: 6px; }
 
         .project-breakdown { display: flex; flex-direction: column; gap: 2px; margin-bottom: 9px; }
-        .project-breakdown span { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--ink-soft); }
+        .project-breakdown span { font-family: 'Inter', sans-serif; font-size: 10px; color: var(--ink-soft); }
         .project-breakdown span.warn { color: var(--oxide); font-weight: 500; }
 
         .project-deadline {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10px;
             margin: 0;
             color: var(--ink-soft);
@@ -642,11 +667,11 @@
         }
 
         .new-project-form.show { display: flex; }
-        .new-project-form input { padding: 9px 10px; border: 1px solid var(--line); font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; }
+        .new-project-form input { padding: 9px 10px; border: 1px solid var(--line); font-family: 'Inter', sans-serif; font-size: 13px; }
         .new-project-form input[name=name] { flex: 2; min-width: 160px; }
         .new-project-form input[name=client] { flex: 1.5; min-width: 140px; }
-        .new-project-form label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--ink-soft); display: flex; flex-direction: column; gap: 3px; }
-        .new-project-form button { padding: 9px 16px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; cursor: pointer; align-self: flex-end; }
+        .new-project-form label { font-family: 'Inter', sans-serif; font-size: 10px; color: var(--ink-soft); display: flex; flex-direction: column; gap: 3px; }
+        .new-project-form button { padding: 9px 16px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); font-family: 'Inter', sans-serif; font-size: 11px; text-transform: uppercase; cursor: pointer; align-self: flex-end; }
         .new-project-form button.cancel { background: var(--paper); color: var(--ink-soft); border-color: var(--line); }
 
         .add-project-card {
@@ -655,7 +680,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 12px;
             color: var(--ink-soft);
             cursor: pointer;
@@ -666,7 +691,7 @@
 
 
         .project-toolbar { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
-        .project-toolbar button { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; text-transform: uppercase; padding: 5px 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink-soft); cursor: pointer; }
+        .project-toolbar button { font-family: 'Inter', sans-serif; font-size: 10.5px; text-transform: uppercase; padding: 5px 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink-soft); cursor: pointer; }
         .project-toolbar button.finalize { border-color: var(--olive); color: var(--olive); }
         .project-toolbar button.edit-btn { border-color: var(--steel); }
         .project-toolbar button.danger { border-color: var(--oxide-light); color: var(--oxide); margin-left: auto; }
@@ -674,7 +699,7 @@
 
         /* ---------- NIVEL 1: estructura (sin caja, solo línea) ---------- */
         .level-label {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.12em;
@@ -697,7 +722,7 @@
             border: 1px solid var(--ink);
             background: var(--ink);
             color: var(--paper);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 11.5px;
             text-transform: uppercase;
             letter-spacing: 0.06em;
@@ -710,7 +735,7 @@
             border: 1px solid var(--line);
             background: var(--card);
             color: var(--ink-soft);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10.5px;
             text-transform: uppercase;
             letter-spacing: 0.04em;
@@ -728,13 +753,13 @@
             color: var(--paper);
             border: none;
             padding: 14px 18px;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             cursor: pointer;
             text-align: left;
             margin-bottom: 8px;
         }
         .today-gate.in-today { background: var(--blueprint); }
-        .today-gate .tg-num { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 26px; line-height: 1; }
+        .today-gate .tg-num { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 26px; line-height: 1; }
         .today-gate .tg-main { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; }
         .today-gate .tg-sub { font-size: 10.5px; opacity: 0.72; margin-top: 3px; }
         .today-gate .tg-sub .warn { color: #F0A48A; }
@@ -746,7 +771,7 @@
             border: 1px solid var(--line);
             background: var(--card);
             color: var(--ink-soft);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -755,13 +780,13 @@
         }
         .secondary-gates button:hover { border-color: var(--ink); color: var(--ink); }
         .secondary-gates button.active { background: var(--steel-light); border-color: var(--ink); color: var(--ink); }
-        .secondary-gates .count { font-family: 'IBM Plex Mono', monospace; color: var(--oxide); margin-left: 5px; }
+        .secondary-gates .count { font-family: 'Inter', sans-serif; color: var(--oxide); margin-left: 5px; }
 
         /* ---------- sección de tareas ---------- */
         .tasks-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
         .tasks-head .th-context { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-        .tasks-head h2 { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 600; margin: 0; }
-        .tasks-head .sub { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-soft); }
+        .tasks-head h2 { font-family: 'Inter', sans-serif; font-size: 17px; font-weight: 600; margin: 0; }
+        .tasks-head .sub { font-family: 'Inter', sans-serif; font-size: 11px; color: var(--ink-soft); }
 
         .task-controls {
             display: flex;
@@ -774,7 +799,7 @@
 
         .view-switch { display: flex; }
         .view-switch button {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10.5px;
             text-transform: uppercase;
             letter-spacing: 0.06em;
@@ -788,11 +813,11 @@
         .view-switch button:last-child { border-right: 1px solid var(--line); }
         .view-switch button.active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
 
-        .sort-control { display: flex; align-items: center; gap: 7px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--steel); }
-        .sort-control select { padding: 5px 8px; border: 1px solid var(--line); background: var(--card); font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: none; letter-spacing: 0; color: var(--ink); }
+        .sort-control { display: flex; align-items: center; gap: 7px; font-family: 'Inter', sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--steel); }
+        .sort-control select { padding: 5px 8px; border: 1px solid var(--line); background: var(--card); font-family: 'Inter', sans-serif; font-size: 11px; text-transform: none; letter-spacing: 0; color: var(--ink); }
 
         .filter-row { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
-        .filter-row .filter-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--steel); padding-top: 6px; flex: 0 0 auto; }
+        .filter-row .filter-label { font-family: 'Inter', sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--steel); padding-top: 6px; flex: 0 0 auto; }
 
         /* ---------- vista de lista ---------- */
         .task-list-head, .task-list-row {
@@ -803,7 +828,7 @@
             padding: 8px 10px;
         }
         .task-list-head {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 9.5px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
@@ -815,7 +840,7 @@
         .task-list-row.is-overdue { border-left-color: var(--oxide); }
         .task-list-row.is-done { opacity: 0.62; }
         .tlr-title { font-size: 13px; }
-        .tlr-cell { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-soft); }
+        .tlr-cell { font-family: 'Inter', sans-serif; font-size: 10.5px; color: var(--ink-soft); }
         .tlr-cell.warn { color: var(--oxide); }
         .tlr-actions { display: flex; gap: 4px; justify-content: flex-end; }
         @media (max-width:860px) {
@@ -856,14 +881,14 @@
             top: 0;
             background: var(--paper);
         }
-        .drawer-head h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; margin: 0; }
+        .drawer-head h3 { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; margin: 0; }
         .drawer-head button { border: none; background: none; font-size: 20px; line-height: 1; color: var(--ink-soft); cursor: pointer; padding: 0 4px; }
         .drawer-head button:hover { color: var(--oxide); }
 
         .drawer-body { padding: 18px 20px 24px; display: flex; flex-direction: column; gap: 14px; }
         .drawer-field { display: flex; flex-direction: column; gap: 5px; }
         .drawer-field > label {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
@@ -873,19 +898,19 @@
             padding: 9px 10px;
             border: 1px solid var(--line);
             background: var(--card);
-            font-family: 'IBM Plex Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-size: 13.5px;
             color: var(--ink);
             width: 100%;
         }
-        .drawer-field input[type=date], .drawer-field select { font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+        .drawer-field input[type=date], .drawer-field select { font-family: 'Inter', sans-serif; font-size: 12px; }
         .drawer-field textarea { resize: vertical; min-height: 60px; }
         .drawer-row { display: flex; gap: 10px; }
         .drawer-row > .drawer-field { flex: 1; }
 
         .drawer-actions { display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid var(--line); padding-top: 14px; margin-top: 4px; }
-        .drawer-actions .cancel { background: var(--paper); color: var(--ink-soft); border: 1px solid var(--line); padding: 9px 16px; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; }
-        .drawer-error { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--oxide); min-height: 13px; }
+        .drawer-actions .cancel { background: var(--paper); color: var(--ink-soft); border: 1px solid var(--line); padding: 9px 16px; font-family: 'Inter', sans-serif; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; }
+        .drawer-error { font-family: 'Inter', sans-serif; font-size: 10.5px; color: var(--oxide); min-height: 13px; }
 
         /* ---------- ACTIVIDAD: historial operativo ---------- */
         .activity-filters { align-items: center; gap: 16px; }
@@ -893,7 +918,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 9.5px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
@@ -903,7 +928,7 @@
             padding: 4px 7px;
             border: 1px solid var(--line);
             background: var(--card);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 11px;
             text-transform: none;
             letter-spacing: 0;
@@ -912,7 +937,7 @@
 
         .day-group { margin-bottom: 26px; }
         .day-label {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.14em;
@@ -945,7 +970,7 @@
             align-items: center;
             gap: 10px;
             flex-wrap: wrap;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 9.5px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
@@ -968,9 +993,9 @@
         .act-prio { color: var(--oxide); letter-spacing: 0.06em; }
 
         /* Nivel 3: el contenido. Nivel 4: contexto y autoría, más ligeros. */
-        .act-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; margin: 0 0 5px; }
-        .act-context { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-soft); margin: 0 0 2px; }
-        .act-byline { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--steel); margin: 0 0 8px; }
+        .act-title { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 15px; margin: 0 0 5px; }
+        .act-context { font-family: 'Inter', sans-serif; font-size: 10.5px; color: var(--ink-soft); margin: 0 0 2px; }
+        .act-byline { font-family: 'Inter', sans-serif; font-size: 10px; color: var(--steel); margin: 0 0 8px; }
         .act-body { font-size: 13.5px; line-height: 1.55; margin: 0; color: var(--ink); }
         .act-body.note-body { font-size: 14px; margin-bottom: 8px; }
 
@@ -985,9 +1010,9 @@
             margin-bottom: 14px;
         }
         .dt-cell { display: flex; flex-direction: column; gap: 3px; }
-        .dt-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--steel); }
+        .dt-label { font-family: 'Inter', sans-serif; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--steel); }
         .dt-value { font-size: 12.5px; }
-        .dt-value .act-state { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; text-transform: uppercase; }
+        .dt-value .act-state { display: inline-block; font-family: 'Inter', sans-serif; font-size: 9.5px; text-transform: uppercase; }
 
         .detail-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
         .detail-actions-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -996,7 +1021,7 @@
             padding: 9px 10px;
             border: 1px solid var(--line);
             background: var(--paper);
-            font-family: 'IBM Plex Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-size: 13px;
             resize: vertical;
             min-height: 56px;
@@ -1021,7 +1046,7 @@
             display: inline-flex;
             align-items: center;
             gap: 7px;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-weight: 600;
             font-size: 14px;
             text-transform: uppercase;
@@ -1047,7 +1072,7 @@
         }
         .assignee-chip input { margin: 0; accent-color: var(--blueprint); flex: 0 0 auto; }
         .assignee-chip .mc-name { font-size: 12px; }
-        .assignee-chip .mc-area { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--steel); }
+        .assignee-chip .mc-area { font-family: 'Inter', sans-serif; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--steel); }
         .assignee-chip:has(input:checked) { background: var(--blueprint); border-color: var(--blueprint); color: var(--paper); }
         .assignee-chip:has(input:checked) .mc-area { color: rgba(241, 237, 227, 0.75); }
 
@@ -1056,20 +1081,20 @@
             border: none;
             background: none;
             padding: 0;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 10.5px;
             color: var(--blueprint);
             text-decoration: underline;
             cursor: pointer;
         }
         .external-toggle:hover { color: var(--ink); }
-        .assignee-external { padding: 8px 10px; border: 1px solid var(--line); background: var(--card); font-family: 'IBM Plex Sans', sans-serif; font-size: 12.5px; width: 100%; }
+        .assignee-external { padding: 8px 10px; border: 1px solid var(--line); background: var(--card); font-family: 'Inter', sans-serif; font-size: 12.5px; width: 100%; }
         .assignee-external-wrap { display: none; flex-direction: column; gap: 4px; }
         .assignee-external-wrap.show { display: flex; }
-        .assignee-external-hint { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; color: var(--steel); }
+        .assignee-external-hint { font-family: 'Inter', sans-serif; font-size: 9.5px; color: var(--steel); }
 
         .area-filter { display: flex; gap: 6px; flex-wrap: wrap; }
-        .area-filter button { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; padding: 5px 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink-soft); cursor: pointer; }
+        .area-filter button { font-family: 'Inter', sans-serif; font-size: 11px; text-transform: uppercase; padding: 5px 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink-soft); cursor: pointer; }
         .area-filter button.active { border-color: var(--ink); color: var(--ink); background: var(--steel-light); }
 
         .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
@@ -1080,9 +1105,9 @@
         }
 
         .col-head { display: flex; align-items: baseline; gap: 8px; border-bottom: 1.5px solid var(--ink); padding-bottom: 8px; margin-bottom: 14px; }
-        .col-num { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--steel); }
-        .col-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; }
-        .col-count { margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-soft); }
+        .col-num { font-family: 'Inter', sans-serif; font-size: 11px; color: var(--steel); }
+        .col-title { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .col-count { margin-left: auto; font-family: 'Inter', sans-serif; font-size: 11px; color: var(--ink-soft); }
 
         .cards { display: flex; flex-direction: column; gap: 10px; min-height: 40px; }
         .card { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--steel); padding: 12px 12px 10px; }
@@ -1095,7 +1120,7 @@
         .card.area-montaje { border-left-color: var(--olive); }
 
         .card-title { font-size: 14px; line-height: 1.4; margin: 0 0 6px; }
-        .card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-soft); }
+        .card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-family: 'Inter', sans-serif; font-size: 10.5px; color: var(--ink-soft); }
         .card-notes { font-size: 12px; color: var(--ink-soft); font-style: italic; margin: 8px 0 0; padding-left: 8px; border-left: 2px solid var(--line); }
 
         .tag { padding: 2px 6px; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -1117,21 +1142,21 @@
         .move-btns { display: flex; gap: 6px; }
         .move-btns button, .del-btn, .edit-btn-sm {
             border: 1px solid var(--line); background: none; color: var(--ink-soft);
-            font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 3px 7px; cursor: pointer;
+            font-family: 'Inter', sans-serif; font-size: 11px; padding: 3px 7px; cursor: pointer;
         }
         .move-btns button:hover { border-color: var(--blueprint); color: var(--blueprint); }
         .move-btns button:disabled { opacity: 0.25; cursor: default; }
         .del-btn:hover { border-color: var(--oxide); color: var(--oxide); }
         .edit-btn-sm:hover { border-color: var(--blueprint); color: var(--blueprint); }
         .card-actions-right { display: flex; gap: 6px; }
-        .empty { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--steel); }
+        .empty { font-family: 'Inter', sans-serif; font-size: 11px; color: var(--steel); }
 
         .edit-form { display: flex; flex-direction: column; gap: 6px; }
-        .edit-form input, .edit-form select, .edit-form textarea { padding: 7px 8px; border: 1px solid var(--line); font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; }
+        .edit-form input, .edit-form select, .edit-form textarea { padding: 7px 8px; border: 1px solid var(--line); font-family: 'Inter', sans-serif; font-size: 13px; }
         .edit-form textarea { resize: vertical; min-height: 44px; }
         .edit-form .row { display: flex; gap: 6px; flex-wrap: wrap; }
         .edit-form .row-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px; }
-        .edit-form .row-actions button { padding: 6px 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); }
+        .edit-form .row-actions button { padding: 6px 12px; font-family: 'Inter', sans-serif; font-size: 11px; cursor: pointer; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); }
         .edit-form .row-actions button.cancel { background: var(--paper); color: var(--ink-soft); border-color: var(--line); }
 
         .today-list { display: flex; flex-direction: column; gap: 10px; }
@@ -1139,26 +1164,26 @@
         .today-item.overdue { border-left-color: var(--oxide); }
         .today-item .top-row { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
         .today-item .title { font-size: 14px; margin: 0 0 6px; }
-        .today-item .meta { display: flex; gap: 6px; flex-wrap: wrap; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-soft); }
+        .today-item .meta { display: flex; gap: 6px; flex-wrap: wrap; font-family: 'Inter', sans-serif; font-size: 10.5px; color: var(--ink-soft); }
 
-        .done-btn { border: 1px solid var(--olive); color: var(--olive); background: none; font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 5px 10px; cursor: pointer; white-space: nowrap; }
+        .done-btn { border: 1px solid var(--olive); color: var(--olive); background: none; font-family: 'Inter', sans-serif; font-size: 11px; padding: 5px 10px; cursor: pointer; white-space: nowrap; }
         .done-btn:hover { background: var(--olive-light); }
 
         .week-group { margin-bottom: 20px; }
-        .week-group-head { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 10px; display: flex; gap: 8px; align-items: baseline; }
+        .week-group-head { font-family: 'Inter', sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 10px; display: flex; gap: 8px; align-items: baseline; }
         .week-group-head .day-count { margin-left: auto; color: var(--steel); }
 
         .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-        .cal-head .cal-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; text-transform: capitalize; }
-        .cal-head button { border: 1px solid var(--line); background: var(--card); color: var(--ink-soft); font-family: 'IBM Plex Mono', monospace; font-size: 13px; padding: 5px 10px; cursor: pointer; }
+        .cal-head .cal-title { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 15px; text-transform: capitalize; }
+        .cal-head button { border: 1px solid var(--line); background: var(--card); color: var(--ink-soft); font-family: 'Inter', sans-serif; font-size: 13px; padding: 5px 10px; cursor: pointer; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 20px; }
-        .cal-dow { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; text-transform: uppercase; color: var(--steel); text-align: center; padding-bottom: 4px; }
+        .cal-dow { font-family: 'Inter', sans-serif; font-size: 9.5px; text-transform: uppercase; color: var(--steel); text-align: center; padding-bottom: 4px; }
         .cal-day { background: var(--card); border: 1px solid var(--line); min-height: 56px; padding: 5px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; }
         .cal-day.empty { background: transparent; border-color: transparent; cursor: default; }
         .cal-day.today { border-color: var(--ink); border-width: 2px; }
         .cal-day.selected { background: var(--steel-light); box-shadow: inset 0 0 0 1px var(--ink); }
         .cal-day.overdue-day { border-color: var(--oxide); }
-        .cal-day-num { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-soft); }
+        .cal-day-num { font-family: 'Inter', sans-serif; font-size: 11px; color: var(--ink-soft); }
         .cal-dots { display: flex; gap: 2px; flex-wrap: wrap; }
         .cal-dot { width: 6px; height: 6px; border-radius: 50%; }
         .cal-dot.area-produccion { background: var(--oxide); }
@@ -1180,11 +1205,11 @@
         }
         .incident-card.open { border-left-color: var(--oxide); }
         .note-card.archived { border-left-color: var(--steel); opacity: 0.6; }
-        .incident-card h3, .note-card h3 { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; margin: 0 0 6px; }
+        .incident-card h3, .note-card h3 { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; margin: 0 0 6px; }
         .incident-card p, .note-card p { font-size: 13px; line-height: 1.5; margin: 6px 0; }
-        .incident-card .meta, .note-card .meta { display: flex; gap: 6px; flex-wrap: wrap; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-soft); }
+        .incident-card .meta, .note-card .meta { display: flex; gap: 6px; flex-wrap: wrap; font-family: 'Inter', sans-serif; font-size: 10.5px; color: var(--ink-soft); }
         .resolution-box { background: var(--olive-light); border-left: 2px solid var(--olive); padding: 8px 10px; margin-top: 8px; font-size: 12.5px; }
-        .resolution-box .rlabel { font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; color: var(--olive); display: block; margin-bottom: 3px; }
+        .resolution-box .rlabel { font-family: 'Inter', sans-serif; font-size: 10px; text-transform: uppercase; color: var(--olive); display: block; margin-bottom: 3px; }
 
 
         .open-form-btn {
@@ -1192,7 +1217,7 @@
             border: 1px solid var(--ink);
             background: var(--ink);
             color: var(--paper);
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'Inter', sans-serif;
             font-size: 11.5px;
             text-transform: uppercase;
             cursor: pointer;
@@ -1202,8 +1227,8 @@
 
         /* ---------- collaborator dashboard ---------- */
         .collab-head { margin-bottom: 18px; }
-        .collab-head h2 { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 20px; margin: 0 0 4px; }
-        .collab-head .sub { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--ink-soft); }
+        .collab-head h2 { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 20px; margin: 0 0 4px; }
+        .collab-head .sub { font-family: 'Inter', sans-serif; font-size: 11.5px; color: var(--ink-soft); }
         .collab-section { margin-bottom: 28px; }
         .collab-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
         @media (max-width:720px) { .collab-cols { grid-template-columns: 1fr; } .indicator-grid { grid-template-columns: repeat(2,1fr); } }
@@ -1216,6 +1241,386 @@
             .print-hide { display: none !important; }
             body { padding: 0; background: #fff; }
             .card, .today-item, .incident-card, .note-card, .indicator-card { break-inside: avoid; }
+        }
+
+        /* ==========================================================
+           CAPA VISUAL
+           Solo apariencia: superficies, radios, sombras, tipografía y
+           estados. No toca layout — ninguna regla de aquí define
+           display, grid, gap ni posición, para no interferir con las
+           media queries de arriba ni con la estructura existente.
+           ========================================================== */
+
+        body { -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+
+        /* ---------- 1. estructura de la página ---------- */
+        .head { border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 14px; }
+        .head h1 { font-weight: 600; letter-spacing: -0.02em; font-size: 20px; }
+        .head .meta { font-size: 10.5px; letter-spacing: 0.1em; color: var(--steel); font-weight: 500; }
+
+        .session-bar { font-size: 12px; }
+        .session-bar .role-tag { border-radius: var(--r-pill); background: var(--steel-light); color: var(--ink-soft); font-weight: 500; padding: 3px 10px; letter-spacing: 0.06em; }
+        .session-bar .link-btn { color: var(--ink-soft); text-decoration: none; font-weight: 500; letter-spacing: 0.02em; }
+        .session-bar .link-btn:hover { color: var(--ink); text-decoration: underline; }
+        .session-bar button { border-radius: var(--r-pill); border-color: var(--line); background: var(--card); padding: 6px 14px; font-weight: 500; box-shadow: var(--sh-1); }
+        .session-bar button:hover { border-color: var(--ink); color: var(--ink); }
+
+        /* ---------- 2. pestañas ---------- */
+        .tabbar { border-bottom: none; background: var(--steel-light); border-radius: var(--r-pill); padding: 4px; }
+        .tabbar button {
+            border: none;
+            background: transparent;
+            border-radius: var(--r-pill);
+            color: var(--ink-soft);
+            font-weight: 500;
+            letter-spacing: 0.03em;
+            padding: 8px 18px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .tabbar button:hover { color: var(--ink); background: rgba(255, 255, 255, 0.6); }
+        .tabbar button.active { background: var(--ink); color: #fff; box-shadow: var(--sh-1); }
+        .tab-badge { border-radius: var(--r-pill); background: var(--oxide); color: #fff; font-weight: 600; }
+        .tabbar button.active .tab-badge { background: rgba(255, 255, 255, 0.22); color: #fff; }
+
+        /* ---------- 3. etiquetas de sección ---------- */
+        .section-label, .dash-label, .level-label {
+            border-bottom: 1px solid var(--line);
+            color: var(--steel);
+            font-weight: 600;
+            letter-spacing: 0.1em;
+        }
+        .dash-label .dash-hint, .level-label .lvl-actions { font-weight: 500; }
+
+        /* ---------- 4. superficies con contenido ---------- */
+        .indicator-card, .project-card, .card, .today-item, .incident-card,
+        .note-card, .act-entry, .user-row, .type-card, .next-action,
+        .action-row, .tl-task, .proj-row, .week-group, .task-list-row,
+        .gate-screen, .resolution-box, .act-detail, .empty, .dash-empty,
+        .add-project-card, .new-project-form, .cal-grid {
+            border-radius: var(--r-lg);
+        }
+
+        .indicator-card, .project-card, .card, .today-item, .incident-card,
+        .note-card, .act-entry, .user-row, .task-list-row, .type-card {
+            border-color: var(--line);
+            box-shadow: var(--sh-1);
+        }
+
+        .card, .today-item, .act-entry, .incident-card, .note-card,
+        .user-row, .task-list-row, .project-card, .type-card {
+            transition: box-shadow 0.16s ease, border-color 0.16s ease;
+        }
+        .card:hover, .today-item:hover, .act-entry:hover, .task-list-row:hover,
+        .project-card:hover, .type-card:hover { box-shadow: var(--sh-2); }
+
+        .empty, .dash-empty { color: var(--steel); }
+
+        /* Los acentos de borde izquierdo siguen significando lo mismo; solo
+           se suavizan para convivir con las esquinas redondeadas. */
+        .today-item, .user-row, .act-entry, .task-list-row, .incident-card { border-left-width: 3px; }
+
+        /* ---------- 5. tarjetas de proyecto ---------- */
+        .project-card { border-top-width: 1px; border-top-color: var(--line); background: var(--card); }
+        .project-card.active { box-shadow: var(--sh-2), inset 0 0 0 1.5px var(--ink); border-color: transparent; }
+        .project-card.general { border-top-color: var(--line); }
+        .project-card.overdue { border-color: rgba(176, 81, 47, 0.3); }
+        .project-name { font-weight: 600; letter-spacing: -0.01em; font-size: 14px; }
+        .project-client { color: var(--steel); }
+        .project-figures .pf-pct { font-weight: 600; letter-spacing: -0.02em; }
+        .project-figures .pf-total { color: var(--steel); font-weight: 500; }
+        .project-bar-track { border-radius: var(--r-pill); background: var(--steel-light); height: 5px; overflow: hidden; }
+        .project-bar-fill { border-radius: var(--r-pill); background: var(--ink); }
+        .project-breakdown span { color: var(--ink-soft); }
+        .project-deadline { border-top-color: var(--line-soft); }
+        .project-deadline .pd-label { color: var(--steel); font-weight: 600; }
+        .add-project-card { border: 1px dashed var(--line); color: var(--steel); background: transparent; }
+        .add-project-card:hover { border-color: var(--ink); color: var(--ink); background: var(--surface); }
+
+        /* ---------- 6. acciones ---------- */
+        /* Primarias: superficie oscura, píldora, sombra ligera. */
+        .btn-primary, .google-btn, .done-btn, .drawer-actions .btn-primary {
+            border-radius: var(--r-pill);
+            border: 1px solid var(--ink);
+            background: var(--ink);
+            color: #fff;
+            font-weight: 500;
+            letter-spacing: 0.03em;
+            box-shadow: var(--sh-1);
+            transition: background 0.15s, box-shadow 0.15s;
+        }
+        .btn-primary:hover, .google-btn:hover, .done-btn:hover {
+            background: #333330;
+            border-color: #333330;
+            box-shadow: var(--sh-2);
+        }
+
+        /* Secundarias: píldora clara y discreta. */
+        .btn-quiet, .secondary-gates button, .project-toolbar button,
+        .move-btns button, .del-btn, .edit-btn-sm, .open-form-btn,
+        .area-filter button, .act-actions button, .detail-actions-row button,
+        .drawer-actions .cancel, .edit-form .row-actions button,
+        .new-project-form button, .user-row button, .cal-head button {
+            border-radius: var(--r-pill);
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--ink-soft);
+            font-weight: 500;
+            letter-spacing: 0.03em;
+            transition: border-color 0.15s, color 0.15s, background 0.15s;
+        }
+        .btn-quiet:hover, .secondary-gates button:hover, .project-toolbar button:hover,
+        .move-btns button:hover, .del-btn:hover, .edit-btn-sm:hover,
+        .open-form-btn:hover, .area-filter button:hover, .act-actions button:hover,
+        .detail-actions-row button:hover, .drawer-actions .cancel:hover,
+        .user-row button:hover, .cal-head button:hover {
+            border-color: var(--ink);
+            color: var(--ink);
+            background: var(--surface);
+            opacity: 1;
+        }
+        .move-btns button:disabled { border-color: var(--line-soft); color: var(--steel); background: var(--surface); }
+        .move-btns button:disabled:hover { border-color: var(--line-soft); color: var(--steel); }
+
+        /* Los botones que ya cargaban significado lo conservan. */
+        .project-toolbar button.danger, .del-btn, .user-row button.revoke { color: var(--oxide); border-color: rgba(176, 81, 47, 0.32); }
+        .project-toolbar button.danger:hover, .del-btn:hover, .user-row button.revoke:hover { border-color: var(--oxide); color: var(--oxide); background: var(--oxide-light); }
+        .project-toolbar button.finalize, .user-row button { color: var(--olive); border-color: rgba(90, 110, 78, 0.32); }
+        .project-toolbar button.finalize:hover { border-color: var(--olive); color: var(--olive); background: var(--olive-light); }
+        .user-row button:hover { border-color: var(--olive); color: var(--olive); background: var(--olive-light); }
+        .user-row button.revoke:hover { border-color: var(--oxide); color: var(--oxide); background: var(--oxide-light); }
+        .new-project-form button { background: var(--ink); border-color: var(--ink); color: #fff; }
+        .new-project-form button:hover { background: #333330; border-color: #333330; }
+        .new-project-form button.cancel { background: var(--card); border-color: var(--line); color: var(--ink-soft); }
+        .edit-form .row-actions button { background: var(--ink); border-color: var(--ink); color: #fff; }
+        .edit-form .row-actions button.cancel { background: var(--card); border-color: var(--line); color: var(--ink-soft); }
+        .open-form-btn { background: var(--ink); border-color: var(--ink); color: #fff; }
+        .open-form-btn:hover { background: #333330; border-color: #333330; color: #fff; }
+        .open-form-btn.secondary { background: var(--card); border-color: var(--line); color: var(--ink-soft); }
+        .open-form-btn.secondary:hover { background: var(--surface); border-color: var(--ink); color: var(--ink); }
+
+        /* ---------- 7. puertas y conmutadores ---------- */
+        .today-gate { border-radius: var(--r-xl); background: var(--ink); box-shadow: var(--sh-2); transition: background 0.15s; }
+        .today-gate:hover { background: #333330; }
+        .today-gate.in-today { background: var(--blueprint); }
+        .today-gate .tg-num { font-weight: 600; letter-spacing: -0.03em; }
+        .today-gate .tg-main { font-weight: 500; letter-spacing: 0.06em; }
+        .today-gate .tg-sub .warn { color: #E9A88F; }
+
+        .secondary-gates button { border-radius: var(--r-pill); box-shadow: var(--sh-1); }
+        .secondary-gates button.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+        .secondary-gates .count { color: var(--oxide); font-weight: 600; }
+        .secondary-gates button.active .count { color: #E9A88F; }
+
+        .view-switch { background: var(--steel-light); border-radius: var(--r-pill); padding: 3px; }
+        .view-switch button { border: none; background: transparent; border-radius: var(--r-pill); color: var(--ink-soft); font-weight: 500; transition: background 0.15s, color 0.15s; }
+        .view-switch button:last-child { border-right: none; }
+        .view-switch button:hover { color: var(--ink); background: rgba(255, 255, 255, 0.65); }
+        .view-switch button.active { background: var(--ink); color: #fff; box-shadow: var(--sh-1); }
+
+        .area-filter button { padding: 6px 13px; }
+        .area-filter button.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+        .filter-row .filter-label, .sort-control { color: var(--steel); font-weight: 600; }
+
+        /* ---------- 8. campos ---------- */
+        .drawer-field input[type=text], .drawer-field input[type=date],
+        .drawer-field select, .drawer-field textarea, .new-project-form input,
+        .mini-filter select, .sort-control select, .assignee-external,
+        .resolution-input, .edit-form input, .edit-form select, .edit-form textarea,
+        .user-row select, .pin-input {
+            border-radius: var(--r-md);
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--ink);
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .drawer-field input[type=text]:focus, .drawer-field input[type=date]:focus,
+        .drawer-field select:focus, .drawer-field textarea:focus, .new-project-form input:focus,
+        .mini-filter select:focus, .sort-control select:focus, .assignee-external:focus,
+        .resolution-input:focus, .edit-form input:focus, .edit-form select:focus,
+        .edit-form textarea:focus, .user-row select:focus, .pin-input:focus {
+            outline: none;
+            border-color: var(--ink);
+            box-shadow: var(--ring);
+        }
+        .drawer-field > label, .mini-filter > label { color: var(--steel); font-weight: 600; }
+        .new-project-form { background: var(--surface); border: 1px solid var(--line); padding: 14px; }
+        .new-project-form label { color: var(--steel); font-weight: 600; }
+        .pin-input { border-radius: var(--r-md); }
+
+        /* Foco visible y consistente en todo lo accionable. */
+        button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+            outline: none;
+            box-shadow: var(--ring);
+        }
+
+        /* ---------- 9. etiquetas y estados ---------- */
+        .tag, .act-state, .act-kind, .gate-badge, .act-prio {
+            border-radius: var(--r-pill);
+            font-weight: 500;
+            letter-spacing: 0.05em;
+        }
+        .tag { padding: 3px 9px; }
+        .tag.project-tag { background: var(--steel-light); color: var(--ink-soft); }
+        .tag.due { background: var(--steel-light); color: var(--ink-soft); }
+        .tag.overdue, .tag.urgent { background: var(--oxide); color: #fff; }
+        .tag.status-open { background: var(--oxide-light); color: var(--oxide); }
+        .tag.status-resolved { background: var(--olive-light); color: var(--olive); }
+
+        .act-state.st-open { background: var(--oxide-light); color: var(--oxide); }
+        .act-state.st-tracking { background: var(--amber-light); color: var(--amber); }
+        .act-state.st-resolved { background: var(--olive-light); color: var(--olive); }
+        .act-state.st-discarded, .act-state.st-archived { background: var(--steel-light); color: var(--steel); }
+        .gate-badge { padding: 4px 11px; }
+
+        /* ---------- 10. avisos ---------- */
+        .alert-banner, .report-banner {
+            border-radius: var(--r-md);
+            border: 1px solid rgba(176, 81, 47, 0.22);
+            box-shadow: var(--sh-1);
+        }
+        .report-banner { border-color: var(--line); }
+
+        /* ---------- 11. resumen ---------- */
+        .next-action { border-radius: var(--r-lg); box-shadow: var(--sh-1); border-color: var(--line); }
+        .next-action .na-label { color: var(--steel); font-weight: 600; }
+        .next-action .na-title { font-weight: 600; letter-spacing: -0.01em; }
+        .next-action .na-sub, .next-action .na-when { color: var(--ink-soft); }
+        .next-action button { border-radius: var(--r-pill); background: var(--ink); border: 1px solid var(--ink); color: #fff; font-weight: 500; box-shadow: var(--sh-1); }
+        .next-action button:hover { background: #333330; border-color: #333330; }
+
+        .action-group-head { color: var(--steel); font-weight: 600; }
+        .action-row .ar-title { font-weight: 500; }
+        .action-row .ar-sub, .action-row .ar-when { color: var(--ink-soft); }
+        .action-row .ar-open { border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--card); color: var(--ink-soft); font-weight: 500; }
+        .action-row .ar-open:hover { border-color: var(--ink); color: var(--ink); background: var(--surface); }
+
+        .ops-strip { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--sh-1); padding: 4px; }
+        .ops-block { border-color: var(--line-soft); }
+        .ops-label { color: var(--steel); font-weight: 600; letter-spacing: 0.1em; }
+        .ops-figure { font-weight: 500; }
+        .ops-detail { color: var(--steel); }
+
+        .proj-row { border-color: var(--line-soft); }
+        .proj-name { font-weight: 500; }
+        .proj-pct { font-weight: 600; letter-spacing: -0.01em; }
+        .proj-meta { color: var(--steel); }
+        .proj-rule { border-radius: var(--r-pill); background: var(--steel-light); overflow: hidden; }
+        .proj-rule span { border-radius: var(--r-pill); background: var(--ink); }
+
+        .tl-day-head { color: var(--steel); font-weight: 600; }
+        .tl-task-title { font-weight: 500; }
+        .tl-task-sub { color: var(--steel); }
+        .tl-mark { border-radius: var(--r-pill); }
+        .act-when { color: var(--steel); font-weight: 500; }
+        .act-text { color: var(--ink-soft); }
+
+        /* ---------- 12. actividad ---------- */
+        .activity-filters { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 12px 14px; }
+        .mini-filter select { border-radius: var(--r-sm); }
+        .day-label { color: var(--steel); font-weight: 600; }
+        .act-kind { font-weight: 600; }
+        .act-dot { border-radius: var(--r-pill); }
+        .act-time { color: var(--steel); }
+        .act-title { font-weight: 600; letter-spacing: -0.01em; }
+        .act-context, .act-byline { color: var(--ink-soft); }
+        .act-body { color: var(--ink-soft); }
+        .act-body.note-body { color: var(--ink); }
+        .act-entry.archived { background: var(--surface); }
+        .act-detail { background: var(--surface); border: 1px solid var(--line-soft); }
+        .dt-label { color: var(--steel); font-weight: 600; }
+        .dt-value { font-weight: 500; }
+        .resolution-box { background: var(--olive-light); border: 1px solid rgba(90, 110, 78, 0.2); }
+        .resolution-box .rlabel { color: var(--olive); font-weight: 600; }
+
+        .type-card { border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--card); box-shadow: var(--sh-1); transition: border-color 0.15s, box-shadow 0.15s; }
+        .type-card:hover { border-color: var(--ink); box-shadow: var(--sh-2); }
+        .type-card .tc-head { font-weight: 600; letter-spacing: 0.04em; }
+        .type-card .tc-desc { color: var(--steel); }
+        .type-card .tc-dot { border-radius: var(--r-pill); }
+        .chooser-question { color: var(--steel); font-weight: 500; }
+
+        /* ---------- 13. panel lateral ---------- */
+        .drawer-overlay { background: rgba(26, 26, 25, 0.28); backdrop-filter: blur(2px); }
+        .drawer {
+            border-left: none;
+            border-radius: var(--r-xl) 0 0 var(--r-xl);
+            background: var(--surface);
+            box-shadow: var(--sh-3);
+        }
+        .drawer-head { border-bottom: 1px solid var(--line); background: var(--surface); }
+        .drawer-head h3 { font-weight: 600; letter-spacing: 0.02em; text-transform: none; font-size: 16px; }
+        .drawer-head button { border-radius: var(--r-pill); color: var(--steel); }
+        .drawer-head button:hover { color: var(--ink); background: var(--steel-light); }
+        .drawer-actions { border-top-color: var(--line); }
+        .drawer-error { color: var(--oxide); font-weight: 500; }
+
+        /* ---------- 14. responsables ---------- */
+        .assignee-chip { border-radius: var(--r-pill); border-color: var(--line); background: var(--card); transition: border-color 0.15s, background 0.15s; }
+        .assignee-chip:hover { border-color: var(--steel); }
+        .assignee-chip .mc-area { color: var(--steel); font-weight: 500; }
+        .assignee-chip:has(input:checked) { background: var(--ink); border-color: var(--ink); color: #fff; box-shadow: var(--sh-1); }
+        .assignee-chip:has(input:checked) .mc-area { color: rgba(255, 255, 255, 0.62); }
+        .assignee-chip input { accent-color: var(--ink); }
+        .external-toggle { color: var(--ink-soft); text-decoration: none; font-weight: 500; }
+        .external-toggle:hover { color: var(--ink); text-decoration: underline; }
+        .assignee-external-hint { color: var(--steel); }
+
+        /* ---------- 15. tablero y tareas ---------- */
+        .col-head { border-bottom: 1px solid var(--line); }
+        .col-num { color: var(--steel); font-weight: 500; }
+        .col-title { font-weight: 600; letter-spacing: 0.03em; }
+        .col-count { color: var(--steel); font-weight: 500; }
+        .card { border-left-width: 3px; }
+        .card-title { font-weight: 500; }
+        .card-notes { color: var(--steel); }
+        .card-actions { border-top-color: var(--line-soft); }
+        .move-btns button, .del-btn, .edit-btn-sm { padding: 5px 11px; }
+
+        .task-list-head { border-bottom: 1px solid var(--line); color: var(--steel); font-weight: 600; }
+        .tlr-title { font-weight: 500; }
+        .tlr-cell { color: var(--ink-soft); }
+
+        .today-item .title { font-weight: 500; }
+        .today-item .meta { color: var(--ink-soft); }
+        .week-group { background: var(--card); border: 1px solid var(--line); box-shadow: var(--sh-1); padding: 14px; }
+        .week-group-head { border-bottom-color: var(--line); font-weight: 600; }
+        .week-group-head .day-count { color: var(--steel); font-weight: 500; }
+
+        .tasks-head h2, .collab-head h2 { font-weight: 600; letter-spacing: -0.02em; }
+        .tasks-head .sub, .collab-head .sub { color: var(--steel); }
+
+        /* ---------- 16. calendario ---------- */
+        .cal-grid { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--sh-1); padding: 8px; }
+        .cal-head .cal-title { font-weight: 600; letter-spacing: -0.01em; }
+        .cal-head button { border-radius: var(--r-pill); padding: 5px 13px; }
+        .cal-dow { color: var(--steel); font-weight: 600; }
+        .cal-day { border-radius: var(--r-sm); border-color: var(--line-soft); transition: border-color 0.12s, background 0.12s; }
+        .cal-day:hover { background: var(--surface); }
+        .cal-day.empty { border-color: transparent; background: transparent; }
+        .cal-day.today { border-color: var(--ink); }
+        .cal-day.selected { background: var(--ink); color: #fff; border-color: var(--ink); }
+        .cal-day.selected .cal-day-num { color: #fff; }
+        .cal-day.overdue-day { border-color: rgba(176, 81, 47, 0.45); }
+        .cal-dot { border-radius: var(--r-pill); }
+
+        /* ---------- 17. pantallas de acceso ---------- */
+        .gate-screen { border-radius: var(--r-xl); border: 1px solid var(--line); border-top: 1px solid var(--line); box-shadow: var(--sh-2); padding: 38px 32px; }
+        .gate-screen h2 { font-weight: 600; letter-spacing: -0.02em; }
+        .gate-screen p { color: var(--ink-soft); }
+        .google-btn { padding: 12px 24px; text-transform: none; font-size: 13.5px; }
+        .pin-error { color: var(--oxide); font-weight: 500; }
+
+        /* ---------- 18. usuarios y colaborador ---------- */
+        .user-row .who .name { font-weight: 500; }
+        .user-row .who .email { color: var(--steel); }
+        .user-row select { border-radius: var(--r-sm); }
+        .collab-head h2 { font-weight: 600; }
+        .incident-card h3, .note-card h3 { font-weight: 600; letter-spacing: -0.01em; }
+        .incident-card .meta, .note-card .meta { color: var(--ink-soft); }
+
+        /* Las sombras no aportan nada en papel y gastan tinta. */
+        @media print {
+            * { box-shadow: none !important; }
         }
     </style>
 </head>
