@@ -1591,7 +1591,8 @@
 
         /* ---------- 16. calendario ---------- */
         .cal-grid { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--sh-1); padding: 8px; }
-        .cal-head .cal-title { font-weight: 600; letter-spacing: -0.01em; }
+        /* 'capitalize' ponia mayuscula a cada palabra: "Agosto De 2026". */
+        .cal-head .cal-title { font-weight: 600; letter-spacing: -0.01em; text-transform: none; }
         .cal-head button { border-radius: var(--r-pill); padding: 5px 13px; }
         .cal-dow { color: var(--steel); font-weight: 600; }
         .cal-day { border-radius: var(--r-sm); border-color: var(--line-soft); transition: border-color 0.12s, background 0.12s; }

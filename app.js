@@ -44,8 +44,14 @@ const INCIDENT_STATUS = { open: 'Abierta', tracking: 'En seguimiento', resolved:
 const INCIDENT_FLOW = ['open', 'tracking', 'resolved', 'discarded'];
 const PRIORITY_LABEL = { alta: 'Alta', normal: 'Normal', baja: 'Baja' };
 
-const addDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
-const todayStr = () => new Date().toISOString().slice(0, 10);
+// toISOString() convierte a UTC, así que en México (UTC-6) a partir de las
+// 18:00 devolvía ya la fecha del día siguiente: el taller trabajando de noche
+// veía las tareas de mañana como "de hoy", las de hoy como vencidas, y las
+// notas quedaban archivadas con fecha del día siguiente. Se compensa el huso
+// para que la fecha sea siempre la que el usuario tiene en su reloj.
+const localISO = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+const addDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return localISO(d); };
+const todayStr = () => localISO(new Date());
 
 /* ================= estado ================= */
 let currentUser = null; // { uid, email, name, photoURL, role, area, status }
@@ -64,6 +70,9 @@ let taskFormOpen = false; // panel lateral de "nueva tarea"
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
 let selectedCalDay = null;
+// De dónde saca sus tareas el calendario: dentro de un proyecto muestra las
+// de ese proyecto (con su filtro de área); en Resumen, las de todos.
+let calScope = 'project'; // project | all
 // Actividad: la memoria operativa. Incidencias y notas dejan de ser dos
 // pestañas y pasan a ser dos tipos de registro dentro del mismo historial.
 let activityType = 'todo';        // todo | incidencias | notas
@@ -605,7 +614,7 @@ function mountAdminTab() {
     if (adminTab === 'resumen' || adminTab === 'proyectos') document.getElementById('alert-banner-holder').innerHTML = '';
     else renderAlertBannerFor(DATA.tasks);
     const content = document.getElementById('admin-tab-content');
-    if (adminTab === 'resumen') { content.innerHTML = resumenView(); return; }
+    if (adminTab === 'resumen') { calScope = 'all'; content.innerHTML = resumenView(); mountCalendar(); return; }
     if (adminTab === 'actividad') { content.innerHTML = actividadView(true); mountActividadView(); return; }
     if (adminTab === 'equipo') { content.innerHTML = usuariosView(); return; }
     content.innerHTML = proyectosViewShell();
@@ -899,12 +908,26 @@ function resumenView() {
       ${hoyColumnHtml()}
       ${proximosDiasHtml()}
     </div>
+    ${calendarioMesHtml()}
     <div class="dash-cols">
       ${proyectosActivosHtml()}
       ${actividadRecienteHtml()}
     </div>
     ${operacionHtml()}
   `;
+}
+
+// Cierra la secuencia temporal del dashboard: hoy → próximos 7 días → el mes
+// completo. Es el mismo calendario de los proyectos, pero con las tareas de
+// todos ellos (ver calScope).
+function calendarioMesHtml() {
+    const pendientes = openTasks().filter(t => t.due).length;
+    return `
+    <p class="dash-label" style="margin-top:26px;">
+      <span>Calendario</span>
+      <span class="dash-hint">todos los proyectos · ${pendientes} con fecha</span>
+    </p>
+    ${calendarShellHtml()}`;
 }
 
 /* ================= ACTIVIDAD (memoria operativa) =================
@@ -1320,15 +1343,19 @@ function mountCalendar() {
     renderCalendar();
 }
 
-// El calendario es una de las tres formas de ver las MISMAS tareas, así que
-// respeta el proyecto activo y el filtro de área igual que lista y kanban.
-function tasksForDate(iso) { return visibleTasks().filter(t => t.col !== 2 && t.due === iso); }
+// Dentro de Proyectos el calendario es una de las tres formas de ver las
+// MISMAS tareas, así que respeta el proyecto activo y el filtro de área igual
+// que lista y kanban. En Resumen la pregunta es otra —"¿cómo viene el mes?"—
+// y ahí muestra las tareas de todos los proyectos.
+function calendarTasks() { return calScope === 'all' ? DATA.tasks : visibleTasks(); }
+function tasksForDate(iso) { return calendarTasks().filter(t => t.col !== 2 && t.due === iso); }
 
 function renderCalendar() {
     const first = new Date(calYear, calMonth, 1);
     const startWeekday = first.getDay();
     const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-    document.getElementById('cal-title').textContent = first.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+    const mesAnio = first.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+    document.getElementById('cal-title').textContent = mesAnio.charAt(0).toUpperCase() + mesAnio.slice(1);
     const dows = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
     let html = dows.map(d => `<div class="cal-dow">${d}</div>`).join('');
     for (let i = 0; i < startWeekday; i++) html += '<div class="cal-day empty"></div>';
@@ -1458,7 +1485,7 @@ function renderProjectBody() {
         return;
     }
     if (taskView === 'lista') { body.innerHTML = taskListHtml(); return; }
-    if (taskView === 'calendario') { body.innerHTML = calendarShellHtml(); mountCalendar(); return; }
+    if (taskView === 'calendario') { calScope = 'project'; body.innerHTML = calendarShellHtml(); mountCalendar(); return; }
     body.innerHTML = `
     <div class="board">
       <div class="col" data-col="0"><div class="col-head"><span class="col-num">01</span><span class="col-title">Por hacer</span><span class="col-count" id="count-0">0</span></div><div class="cards" id="cards-0"></div></div>
